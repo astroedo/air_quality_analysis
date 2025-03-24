@@ -1,2 +1,3 @@
 # Air Quality Analysis 🍃
-Italian public authorities analyze air quality data to monitor pollution and its health impacts. By integrating air pollution, sensor, and administrative data, decision-makers can assess trends and risks. This project visualizes and analyzes air quality data from Dati Lombardia to evaluate pollution levels across different administrative areas.
+
+Air pollution is a growing concern, affecting public health and the environment. To address this, our project, develops a client-server application for analyzing and visualizing air quality data from Dati Lombardia. By integrating real-time sensor data, we provide insights into pollution trends, aiding decision-makers in monitoring and mitigating risks.
