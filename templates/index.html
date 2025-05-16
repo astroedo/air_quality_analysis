@@ -1,0 +1,56 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Persone</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>Gestione Persone</h1>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Form per aggiungere una persona -->
+    <h2>Aggiungi Persona</h2>
+    <form action="/add" method="POST">
+        <label for="firstname">Nome:</label>
+        <input type="text" name="firstname" required><br><br>
+        
+        <label for="lastname">Cognome:</label>
+        <input type="text" name="lastname" required><br><br>
+        
+        <label for="age">Età:</label>
+        <input type="number" name="age" required><br><br>
+        
+        <button type="submit">Aggiungi Persona</button>
+    </form>
+
+    <!-- Form per cercare una persona -->
+    <h2>Cerca Persona</h2>
+    <form action="/query" method="POST">
+        <label for="firstname">Nome:</label>
+        <input type="text" name="firstname"><br><br> <!-- Rimuoviamo il "required" qui -->
+        
+        <button type="submit">Cerca</button>
+    </form>
+
+    <!-- Visualizzare le persone -->
+    <h2>Persone Registrate</h2>
+    <ul>
+        {% for person in persons %}
+            <li>{{ person[1] }} {{ person[2] }} ({{ person[3] }} anni)</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
