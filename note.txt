@@ -1,9 +1,15 @@
-install Python exension
-python -m venv .venv 
-pip install flask
+install Python exension     
+python -m venv .venv        // add virtual env
+pip install flask           // install flask
+flask                       // to check if exist
 
+flask --app app run         // to RUN the web app
+flask run                   // to run default -> app.py
 
+flask run --debug           // show python if occurs an error
 
+Ctrl+C                      // stop running
+clear                       // clear the terminal shell 
 
-extra
+Extra
 https://flask.palletsprojects.com/en/stable/
