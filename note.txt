@@ -1,0 +1,9 @@
+install Python exension
+python -m venv .venv 
+pip install flask
+
+
+
+
+extra
+https://flask.palletsprojects.com/en/stable/
