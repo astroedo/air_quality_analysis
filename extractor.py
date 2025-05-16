@@ -1,45 +1,26 @@
-import psycopg2
 import requests
-from datetime import datetime, timedelta
-
-def get_db_connection():
-    return psycopg2.connect(
-        host="localhost",
-        database="se4gProject",
-        user="se4g",
-        password="admin"
-    )
-
-def create_table_if_not_exists(conn):
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS sensori_aria (
-            id SERIAL PRIMARY KEY,
-            idsensore TEXT,
-            data TIMESTAMP,
-            valore NUMERIC,
-            stato TEXT,
-            idoperatore TEXT,
-            UNIQUE (idsensore, data)
-        )
-    """)
-
-    conn.commit()
-    cur.close()
+from datetime import datetime
+from db import get_db_connection, create_table_if_not_exists
 
 def get_filtered_data(base_url, limit=30):
-    # Scarica gli ultimi `limit` record ordinati per data decrescente
+    # Costruisci l'URL per richiedere i dati ordinati per data decrescente e limitati ai primi 30
     url = f"{base_url}?$order=data DESC&$limit={limit}"
     print(f"Chiamata API: {url}")
+    
     try:
+        # Fai la richiesta all'API
         response = requests.get(url, timeout=10)
-        response.raise_for_status()
+        response.raise_for_status()  # Verifica se la richiesta è andata a buon fine
+        
+        # Converte la risposta in formato JSON
         data = response.json()
         print(f"Ricevuti {len(data)} record.")
+        
         return data
     except requests.RequestException as e:
         print(f"Errore durante la richiesta: {e}")
         return []
+
 
 def get_last_date_in_db(conn):
     cur = conn.cursor()
@@ -72,7 +53,6 @@ def insert_new_data(conn, dati_aria):
             ON CONFLICT (idsensore, data) DO NOTHING
         """, insert_data)
 
-
     conn.commit()
     cur.close()
 
@@ -98,6 +78,3 @@ def update_last_30_data():
 
     conn.close()
     print("Aggiornamento completato.")
-
-if __name__ == "__main__":
-    update_last_30_data()

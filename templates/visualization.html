@@ -43,6 +43,7 @@
     <table>
         <thead>
             <tr>
+                <th>#</th> <!-- Numero della riga -->
                 <th>Sensore</th>
                 <th>Data</th>
                 <th>Valore</th>
@@ -52,6 +53,7 @@
         <tbody>
             {% for row in dati %}
                 <tr>
+                    <td>{{ loop.index }}</td> <!-- Numero della riga -->
                     <td>{{ row[0] }}</td>
                     <td>{{ row[1] }}</td>
                     <td>{{ row[2] }}</td>
