@@ -1,56 +1,158 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Persone</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
 </head>
 <body>
-    <h1>Gestione Persone</h1>
+    <div class="container">
+        <h1>Gestione Persone</h1>
 
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul>
-                {% for message in messages %}
-                    <li>{{ message }}</li>
-                {% endfor %}
-            </ul>
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Form per aggiungere una persona -->
+        <h2 class="section-title">Aggiungi Persona</h2>
+        <form action="/add" method="POST">
+            <label for="firstname">Nome:</label>
+            <input type="text" name="firstname" required>
+
+            <label for="lastname">Cognome:</label>
+            <input type="text" name="lastname" required>
+
+            <label for="age">Età:</label>
+            <input type="number" name="age" required>
+
+            <button type="submit">Aggiungi Persona</button>
+        </form>
+
+        <!-- Form per cercare una persona -->
+        <h2 class="section-title">Cerca Persona</h2>
+        <form action="/query" method="POST">
+            <label for="firstname">Nome:</label>
+            <input type="text" name="firstname">
+
+            <button type="submit">Cerca</button>
+        </form>
+
+        <!-- Visualizzare le persone -->
+        <h2 class="section-title">Persone Registrate</h2>
+        {% if persons %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Età</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person in persons %}
+                        <tr>
+                            <td>{{ person[1] }}</td>
+                            <td>{{ person[2] }}</td>
+                            <td>{{ person[3] }} anni</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Nessuna persona registrata.</p>
         {% endif %}
-    {% endwith %}
-
-    <!-- Form per aggiungere una persona -->
-    <h2>Aggiungi Persona</h2>
-    <form action="/add" method="POST">
-        <label for="firstname">Nome:</label>
-        <input type="text" name="firstname" required><br><br>
-        
-        <label for="lastname">Cognome:</label>
-        <input type="text" name="lastname" required><br><br>
-        
-        <label for="age">Età:</label>
-        <input type="number" name="age" required><br><br>
-        
-        <button type="submit">Aggiungi Persona</button>
-    </form>
-
-    <!-- Form per cercare una persona -->
-    <h2>Cerca Persona</h2>
-    <form action="/query" method="POST">
-        <label for="firstname">Nome:</label>
-        <input type="text" name="firstname"><br><br> <!-- Rimuoviamo il "required" qui -->
-        
-        <button type="submit">Cerca</button>
-    </form>
-
-    <!-- Visualizzare le persone -->
-    <h2>Persone Registrate</h2>
-    <ul>
-        {% for person in persons %}
-            <li>{{ person[1] }} {{ person[2] }} ({{ person[3] }} anni)</li>
-        {% endfor %}
-    </ul>
+    </div>
 </body>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .messages {
+            background-color: #dff0d8;
+            border-left: 5px solid #3c763d;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .section-title {
+            margin-top: 40px;
+            color: #2c3e50;
+        }
+    </style>
+
 </html>
