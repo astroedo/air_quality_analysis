@@ -13,3 +13,24 @@ clear                       // clear the terminal shell
 
 Extra
 https://flask.palletsprojects.com/en/stable/
+
+
+
+Install new PYTHON stuff:
+1. Create the virtual environment:
+python -m venv .venv
+
+2. activate the virtual environment:
+.\.venv\Scripts\activate        # For PowerShell on Windows
+.\.venv\Scripts\activate.bat    # Command Prompt (Windows)
+source .venv/bin/activate       # macOS/Linux
+
+3. Install packages:
+pip install flask psycopg2
+
+4. Generate the requirements.txt file:
+pip freeze > requirements.txt
+
+
+ALL THE OTHERS:
+pip install -r requirements.txt

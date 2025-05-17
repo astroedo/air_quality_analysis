@@ -5,7 +5,7 @@ from db_station import create_station_table
 
 BASE_URL_STATION = "https://www.dati.lombardia.it/resource/ib47-atvt.json"
 
-def get_filtered_station_data(limit=100):
+def get_filtered_station_data(limit=200):
     url = f"{BASE_URL_STATION}?$limit={limit}"
     print(f"Chiamata API (stazioni): {url}")
 
@@ -82,7 +82,7 @@ def update_station_data():
     conn = get_db_connection()
     create_station_table()
 
-    data = get_filtered_station_data(limit=100)
+    data = get_filtered_station_data(limit=200)
     if data:
         insert_station_data(conn, data)
     else:
