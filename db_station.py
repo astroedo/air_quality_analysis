@@ -1,30 +1,9 @@
-import psycopg2
+# db_station.py
+from db_connection import get_db_connection
 
-def get_db_connection():
-    return psycopg2.connect(
-        host="localhost",
-        database="se4gProject",
-        user="se4g",
-        password="admin"
-    )
-
-def create_table_if_not_exists(conn):
+def create_station_table():
+    conn = get_db_connection()
     cur = conn.cursor()
-    
-    # Tabella per i sensori
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS sensori_aria (
-            id SERIAL PRIMARY KEY,
-            idsensore TEXT,
-            data TIMESTAMP,
-            valore NUMERIC,
-            stato TEXT,
-            idoperatore TEXT,
-            UNIQUE (idsensore, data)
-        )
-    """)
-
-    # Tabella per le stazioni
     cur.execute("""
         CREATE TABLE IF NOT EXISTS stazioni_aria (
             id SERIAL PRIMARY KEY,
@@ -47,6 +26,10 @@ def create_table_if_not_exists(conn):
             UNIQUE (idsensore, datastart)
         )
     """)
-
     conn.commit()
     cur.close()
+    conn.close()
+
+if __name__ == "__main__":
+    create_station_table()
+    print("Tabella 'stazioni_aria' creata (se non esiste già).")
