@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Sensori Aria</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+    <h1 class="mb-4">Dashboard Sensori Aria</h1>
+
+    <p><strong>Stato della tabella:</strong> {{ status }}</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-success" role="alert">
+          {% for message in messages %}
+            <div>{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Pulsanti per creare e eliminare la tabella 
+    <div class="mb-3">
+        
+        <form action="{{ url_for('sensor_create') }}" method="post" style="display: inline;">
+            <button class="btn btn-primary" type="submit">Crea Tabella</button>
+        </form>
+        
+        <form action="{{ url_for('sensor_drop') }}" method="post" style="display: inline;">
+            <button class="btn btn-danger" type="submit">Elimina Tabella</button>
+        </form>
+
+        <form action="{{ url_for('sensor_update') }}" method="post" style="display: inline;">
+            <button class="btn btn-info" type="submit">Aggiorna Ultimi 30 Dati</button>
+        </form>
+    </div>
+    -->
+
+    <form class="form-inline mb-4" action="{{ url_for('sensor_import_sample') }}" method="post">
+        <input class="form-control mr-2" type="number" name="n" placeholder="Record da importare" min="1">
+        <button class="btn btn-success" type="submit">Importa Dati API</button>
+    </form>
+    
+    <form class="form-inline mb-3" action="{{ url_for('sensor_delete_n') }}" method="post">
+        <input class="form-control mr-2" type="number" name="n" placeholder="Record da eliminare" min="1">
+        <button class="btn btn-warning" type="submit">Elimina N Record</button>
+    </form>
+
+    <!-- Tabella per visualizzare i dati -->
+    <h2>Dati Recenti</h2>
+    <table class="table table-striped table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th>#</th>
+                <th>Sensore</th>
+                <th>Data</th>
+                <th>Valore</th>
+                <th>Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in dati %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ row[0] }}</td>
+                    <td>{{ row[1] }}</td>
+                    <td>{{ row[2] }}</td>
+                    <td>{{ row[3] }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">Nessun dato disponibile.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('home') }}">Torna alla Home</a>
+</body>
+</html>
