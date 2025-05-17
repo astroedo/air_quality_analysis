@@ -34,3 +34,15 @@ pip freeze > requirements.txt
 
 ALL THE OTHERS:
 pip install -r requirements.txt
+
+
+
+
+Project API
+airValues: https://www.dati.lombardia.it/Ambiente/Dati-sensori-aria-dal-2018/g2hp-ar79/about_data
+    idsensore, data, valore, stato, idoperatore
+
+stations: https://www.dati.lombardia.it/Ambiente/Stazioni-qualit-dell-aria/ib47-atvt/about_data
+    idsensore, nometiposensore, unitamisura, idstazione, nomestazione,
+    quota, provincia, comune, storico, datastart, datastop, utm_nord,
+    utm_est, lat, lng
