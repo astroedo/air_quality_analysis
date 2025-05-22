@@ -14,9 +14,11 @@ You are asked to develop a client-server application that supports users in quer
 
 Project API
 measurement: https://www.dati.lombardia.it/Ambiente/Dati-sensori-aria-dal-2018/g2hp-ar79/about_data
+API:         https://www.dati.lombardia.it/resource/g2hp-ar79.json
     idsensore, data, valore, stato, idoperatore
 
-station: https://www.dati.lombardia.it/Ambiente/Stazioni-qualit-dell-aria/ib47-atvt/about_data
+station:     https://www.dati.lombardia.it/Ambiente/Stazioni-qualit-dell-aria/ib47-atvt/about_data
+API:         https://www.dati.lombardia.it/resource/ib47-atvt.json
     idsensore, nometiposensore, unitamisura, idstazione, nomestazione,
     quota, provincia, comune, storico, datastart, datastop, utm_nord,
     utm_est, lat, lng, locationtxt, location(geometry:point)
