@@ -22,3 +22,5 @@ API:         https://www.dati.lombardia.it/resource/ib47-atvt.json
     idsensore, nometiposensore, unitamisura, idstazione, nomestazione,
     quota, provincia, comune, storico, datastart, datastop, utm_nord,
     utm_est, lat, lng, locationtxt, location(geometry:point)
+
+N.B. API format: .csv .json .geojson 
