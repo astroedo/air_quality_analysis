@@ -4,3 +4,19 @@ Italian public authorities collect, process, and analyze air quality data to mon
 
 ## Project Goals:
 You are asked to develop a client-server application that supports users in querying and visualizing data retrieved from the Dati Lombardia air quality sensor dataset. The system should integrate and process real-time or historical air quality measurements to provide insights into pollution distribution, trends, and exposure risks.
+
+
+
+
+
+
+
+
+Project API
+measurement: https://www.dati.lombardia.it/Ambiente/Dati-sensori-aria-dal-2018/g2hp-ar79/about_data
+    idsensore, data, valore, stato, idoperatore
+
+station: https://www.dati.lombardia.it/Ambiente/Stazioni-qualit-dell-aria/ib47-atvt/about_data
+    idsensore, nometiposensore, unitamisura, idstazione, nomestazione,
+    quota, provincia, comune, storico, datastart, datastop, utm_nord,
+    utm_est, lat, lng, locationtxt, location(geometry:point)
