@@ -1,0 +1,61 @@
+import psycopg2
+import pandas as pd
+
+# Connect to PostgreSQL database
+def connect_to_postgres():
+    conn = psycopg2.connect(
+        host="localhost",       
+        database="lombardia_air_quality", 
+        user="airdata_user",    
+        password="user"
+    )
+    return conn
+
+
+
+def query_data(query, format='dataframe'):
+    """
+    Esegue una query su PostgreSQL e restituendo DataFrame o JSON (lista di dict). Parametri:
+        query (str): Query SQL da eseguire
+        format (str): 'dataframe' o 'json'
+    """
+    try:
+        conn = connect_to_postgres()
+        if format == 'dataframe':
+            df = pd.read_sql_query(query, conn)
+            return df
+        
+        elif format == 'json':
+            cur = conn.cursor()
+            cur.execute(query)
+            columns = [desc[0] for desc in cur.description]
+            rows = cur.fetchall()
+            return [dict(zip(columns, row)) for row in rows]
+        
+        else:
+            raise ValueError("format deve essere 'dataframe' o 'json'")
+
+    except Exception as e:
+        print(f"Errore: {e}")
+        return None
+
+    finally:
+        if conn:
+            conn.close()
+
+
+
+# --- Esempio di utilizzo ---
+# Esegui una query SQL
+sql_query = "SELECT * FROM users;"
+
+# Ricevere JSON
+json_data = query_data(sql_query, format='json')
+print('JSON:')
+print(json_data)
+
+# Ricevere un DataFrame
+df = query_data(sql_query, format='dataframe')
+print('Dataframe:')
+print(df.head(), '\n') 
+# ignore userWARNING
