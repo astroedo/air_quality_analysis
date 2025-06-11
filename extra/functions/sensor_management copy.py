@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime
-from db_connection import get_db_connection
+from extra.db_connection import get_db_connection
 
 # URL per l'API dei sensori
 BASE_URL_SENSOR = "https://www.dati.lombardia.it/resource/g2hp-ar79.json"

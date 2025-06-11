@@ -1,32 +1,46 @@
-from flask import Flask, jsonify, request
-import json
+from flask import Flask, jsonify, request  # importa request
+import psycopg2
+import pandas as pd
 
-# login /signin 
-app = Flask("GeoAir")
+app = Flask(__name__)
 
-def signin():
-    print('For signin insert your data:\n')
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-    # put the data into USER DATABASE, simulate saving to a database
-    with open('users.json', 'a') as f: # to be defined !!!!!
-        json.dump({"username": username, "email": email, "password": password}, f)
-        f.write('\n')
-    if not username or not password or not email:
-        return jsonify({"message": "Username and password are required"}), 400
-    else:       
-        return jsonify({"message": "Signin successful"}), 200
+def connect_to_postgres():
+    conn = psycopg2.connect(
+        host="localhost",
+        database="lombardia_air_quality",
+        user="airdata_user",
+        password="user"
+    )
+    return conn
 
+@app.route('/api/stations', methods=['GET'])
+def get_stations():
+    pollutant = request.args.get('pollutant', default=None, type=str)  # legge il parametro
+    
+    try:
+        conn = connect_to_postgres()
+        
+        if pollutant:
+            query = """
+                SELECT nomestazione, lat, lng, nometiposensore
+                FROM station
+                WHERE lat IS NOT NULL AND lng IS NOT NULL
+                AND nometiposensore = %s;
+            """
+            df = pd.read_sql_query(query, conn, params=(pollutant,))
+        else:
+            query = """
+                SELECT nomestazione, lat, lng, nometiposensore
+                FROM station
+                WHERE lat IS NOT NULL AND lng IS NOT NULL;
+            """
+            df = pd.read_sql_query(query, conn)
+        
+        conn.close()
+        data = df.to_dict(orient='records')
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-
-
-
-
-
-
-
-
-# start the Flask server
-app.run(port=5000)
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)

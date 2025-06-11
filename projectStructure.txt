@@ -1,6 +1,6 @@
 air_qiality_analysis/
 │
-├── app.py
+├── server.py
 ├── db_connection.py
 │
 ├── functions/
