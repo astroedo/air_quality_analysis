@@ -1,20 +1,29 @@
 air_qiality_analysis/
 │
-├── server.py
-├── db_connection.py
+├── server.py                       # server side api
+│
+├── app.py                          # dashboard sartingo point 
+│
+├── components/
+│   ├── map_component.py            # api for the map1
+│   └── dropdown_component.py                   
 │
 ├── functions/
-│   ├── sensor_management.py
-│   └── station_management.py       # to do
+│   ├── fetch_pollutant.py          # api for the map1
+│   └── logger.py                   
 │
-├── templates/
-│   ├── home.html
-│   ├── sensor_table.html
-│   └── station_table.html          # to do
+├── pages/
+│   ├── home_page.py
+│   ├── map_page.py                 # first page (change name if needed)
+│   └── third_page.py               # to do
+│
+├── database/
+│   └── otherStuff...            
 │
 └── otherStuff...
 
 
 
-RUN: flask run --debug 
-MANAGE SENSOR db with cmd: python -m functions.sensor_management
+TO RUN:  
+terminal 1:    python server.py
+terminal 2:    python app.py

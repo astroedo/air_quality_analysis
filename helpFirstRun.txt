@@ -1,3 +1,11 @@
+TO RUN:  
+terminal 1:    python server.py
+terminal 2:    python app.py
+
+
+
+IF NEEDED YOU CAN ALSO DO:
+
 install Python exension     
 python -m venv .venv        // add virtual env
 pip install flask           // install flask
