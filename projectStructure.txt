@@ -1,0 +1,20 @@
+air_qiality_analysis/
+│
+├── app.py
+├── db_connection.py
+│
+├── functions/
+│   ├── sensor_management.py
+│   └── station_management.py       # to do
+│
+├── templates/
+│   ├── home.html
+│   ├── sensor_table.html
+│   └── station_table.html          # to do
+│
+└── otherStuff...
+
+
+
+RUN: flask run --debug 
+MANAGE SENSOR db with cmd: python -m functions.sensor_management

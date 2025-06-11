@@ -1,0 +1,48 @@
+install Python exension     
+python -m venv .venv        // add virtual env
+pip install flask           // install flask
+flask                       // to check if exist
+
+flask --app app run         // to RUN the web app
+flask run                   // to run default -> app.py
+
+flask run --debug           // show python if occurs an error
+
+Ctrl+C                      // stop running
+clear                       // clear the terminal shell 
+
+Extra
+https://flask.palletsprojects.com/en/stable/
+
+
+
+Install new PYTHON stuff:
+1. Create the virtual environment:
+python -m venv .venv
+
+2. activate the virtual environment:
+.\.venv\Scripts\activate        # For PowerShell on Windows
+.\.venv\Scripts\activate.bat    # Command Prompt (Windows)
+source .venv/bin/activate       # macOS/Linux
+
+3. Install packages:
+pip install flask psycopg2
+
+4. Generate the requirements.txt file:
+pip freeze > requirements.txt
+
+
+ALL THE OTHERS:
+pip install -r requirements.txt
+
+
+
+
+Project API
+airValues: https://www.dati.lombardia.it/Ambiente/Dati-sensori-aria-dal-2018/g2hp-ar79/about_data
+    idsensore, data, valore, stato, idoperatore
+
+stations: https://www.dati.lombardia.it/Ambiente/Stazioni-qualit-dell-aria/ib47-atvt/about_data
+    idsensore, nometiposensore, unitamisura, idstazione, nomestazione,
+    quota, provincia, comune, storico, datastart, datastop, utm_nord,
+    utm_est, lat, lng

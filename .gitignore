@@ -1,0 +1,6 @@
+# Ignora il file virtualenv (se presente)
+.venv/
+
+# Ignora la cartella __pycache__
+__pycache__/
+**/__pycache__/
