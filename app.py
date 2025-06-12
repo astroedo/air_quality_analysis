@@ -43,7 +43,7 @@ app.layout = html.Div([
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "center",
-        "backgroundColor": "#2c3e50",
+        "backgroundColor": "rgb(19 129 159)",
         "position": "fixed",
         "width": "100%",
         "height": "60px",
@@ -51,7 +51,7 @@ app.layout = html.Div([
         "zIndex": 999
     }),
 
-    # Page container for teh content
+    # Page container for the content
     html.Div(page_container, style={"paddingTop": "60px"})
 ])
 

@@ -6,7 +6,7 @@ from dash import dcc, html
 
 def create_dropdown(pollutants):
     return html.Div([
-        html.Label("Seleziona inquinante:"),
+        html.Label("Select pollutant:"),
         dcc.Loading(
             id="loading-map",
             type="circle",

@@ -1,10 +1,10 @@
-from flask import Flask, jsonify, request  # importa request
+from flask import Flask, jsonify, request
 import psycopg2
 import pandas as pd
 
 app = Flask(__name__)
 
-def connect_to_postgres():
+def db_connection():
     conn = psycopg2.connect(
         host="localhost",
         database="lombardia_air_quality",
@@ -15,10 +15,10 @@ def connect_to_postgres():
 
 @app.route('/api/stations', methods=['GET'])
 def get_stations():
-    pollutant = request.args.get('pollutant', default=None, type=str)  # legge il parametro
+    pollutant = request.args.get('pollutant', default=None, type=str)  # load parameter
     
     try:
-        conn = connect_to_postgres()
+        conn = db_connection()
         
         if pollutant:
             query = """

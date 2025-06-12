@@ -4,7 +4,7 @@ from components.map_component import create_map, create_layer_group
 from components.dropdown_component import create_dropdown
 from functions.fetch_pollutant import fetch_pollutant
 
-dash.register_page(__name__, path="/map", name="Mappa")
+dash.register_page(__name__, path="/map", name="Map")
 
 df_all = fetch_pollutant()
 pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
@@ -39,5 +39,5 @@ def update_map(selected_pollutant):
     base_tile = create_map().children[0]
     if selected_pollutant and not df.empty:
         layer = create_layer_group(df, selected_pollutant)
-        return [base_tile, layer], f"{df.shape[0]} stazioni per '{selected_pollutant}'"
-    return [base_tile], "Nessun dato disponibile."
+        return [base_tile, layer], f"{df.shape[0]} stations for '{selected_pollutant}'"
+    return [base_tile], "No data."

@@ -1,3 +1,7 @@
+"""
+Create the map component with a dynamic layer group based on selected pollutant.
+"""
+
 from dash import html
 import dash_leaflet as dl
 
