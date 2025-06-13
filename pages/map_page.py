@@ -7,7 +7,7 @@ from functions.fetch_pollutant import fetch_pollutant
 dash.register_page(__name__, path="/map", name="Map")
 
 df_all = fetch_pollutant()
-pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
+pollutants =  sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
 
 # Visualization layout
 layout = html.Div([
@@ -35,9 +35,24 @@ layout = html.Div([
     [Input("pollutant-selector", "value")]
 )
 def update_map(selected_pollutant):
-    df = fetch_pollutant(selected_pollutant)
     base_tile = create_map().children[0]
-    if selected_pollutant and not df.empty:
+
+    if selected_pollutant in [None, "Tutti"]:
+        df = fetch_pollutant()  # Nessun filtro
+        num_sensors = df.shape[0]
+        num_stations = df["nomestazione"].nunique()
         layer = create_layer_group(df, selected_pollutant)
-        return [base_tile, layer], f"{df.shape[0]} stations for '{selected_pollutant}'"
-    return [base_tile], "No data."
+        count_text = f"All pollutants – {num_sensors} sensors, {num_stations} stations"
+        return [base_tile, layer], count_text
+
+    else:
+        df = fetch_pollutant(selected_pollutant)
+        pollutant_label = f"Pollutant: '{selected_pollutant}'"
+        layer = create_layer_group(df, selected_pollutant)
+        if not df.empty:
+            num_stations = df["nomestazione"].nunique()
+            count_text = f"{pollutant_label} – {num_stations} stations"
+        else:
+            count_text = "No data."
+        return [base_tile, layer], count_text
+

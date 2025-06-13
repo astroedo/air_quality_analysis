@@ -25,16 +25,31 @@ def create_map():
 
 def create_layer_group(df, pollutant):
     if df.empty:
-        return dl.LayerGroup([], id=f"layer-{pollutant}")
-    df_filtered = df[df["nometiposensore"] == pollutant]
+        return dl.LayerGroup([], id=f"layer-{pollutant or 'tutti'}")
+
+    # Filter dataframe by pollutant if specified and not 'Tutti'
+    if pollutant and pollutant != "Tutti":
+        df = df[df["nometiposensore"] == pollutant]
+
+    # Group by station name and coordinates, aggregate sensors into a list
+    grouped = (
+        df.groupby(["nomestazione", "lat", "lng"])["nometiposensore"]
+        .apply(list)
+        .reset_index()
+    )
+
     markers = [
         dl.Marker(
             position=[row["lat"], row["lng"]],
             children=dl.Popup([
                 html.H4(row["nomestazione"]),
-                html.P(f"Inquinante: {pollutant}"),
-                html.P(f"Coord: {row['lat']:.4f}, {row['lng']:.4f}")
+                html.P(f"Coord: {row['lat']:.4f}, {row['lng']:.4f}"),
+                html.P("Inquinanti:"),
+                html.Ul([html.Li(p) for p in row["nometiposensore"]])
             ])
-        ) for _, row in df_filtered.iterrows()
+        ) for _, row in grouped.iterrows()
     ]
-    return dl.LayerGroup(markers, id=f"layer-{pollutant}")
+
+    # Return layer group with markers
+    return dl.LayerGroup(markers, id=f"layer-{pollutant or 'tutti'}")
+
