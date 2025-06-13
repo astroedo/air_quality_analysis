@@ -32,7 +32,7 @@ app.layout = html.Div([
                 "textDecoration": "none",
                 "fontSize": "16px"
             }),
-            dcc.Link("Mappa", href="/map", style={
+            dcc.Link("Map", href="/map", style={
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
