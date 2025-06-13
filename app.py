@@ -48,7 +48,7 @@ app.layout = html.Div([
         "width": "100%",
         "height": "60px",
         "top": 0,
-        "zIndex": 999
+        "zIndex": 1001
     }),
 
     # Page container for the content

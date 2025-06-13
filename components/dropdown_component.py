@@ -26,7 +26,7 @@ def create_dropdown(pollutants):
         "position": "absolute",
         "top": "10px",
         "right": "10px",
-        "zIndex": 1000,
+        "zIndex": 800,
         "width": "300px",
         "background": "white",
         "padding": "15px",
