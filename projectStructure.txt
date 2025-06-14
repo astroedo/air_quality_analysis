@@ -4,18 +4,17 @@ air_qiality_analysis/
 │
 ├── app.py                          # dashboard sartingo point 
 │
-├── components/
-│   ├── map_component.py            # api for the map1
-│   └── dropdown_component.py                   
-│
-├── functions/
-│   ├── fetch_pollutant.py          # api for the map1
-│   └── logger.py                   
-│
 ├── pages/
 │   ├── home_page.py
 │   ├── map_page.py                 # first page (change name if needed)
 │   └── third_page.py               # to do
+│
+├── components/
+│   ├── map_component.py            # api for the map1
+│   ├── dropdown_component.py                   
+│   │
+│   ├── fetch_pollutant.py          # api for the map1
+│   └── logger.py                   
 │
 ├── database/
 │   └── otherStuff...            
