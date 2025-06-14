@@ -6,7 +6,7 @@ Logs errors if the fetch fails.
 
 import pandas as pd
 import requests
-from functions.logger import logger
+from components.logger import logger
 
 def fetch_pollutant(pollutant=None):
     try:

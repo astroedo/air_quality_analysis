@@ -1,6 +1,6 @@
 import dash
 from dash import html, dcc, page_container
-from functions.logger import setup_logging
+from components.logger import setup_logging
 
 setup_logging()
 
