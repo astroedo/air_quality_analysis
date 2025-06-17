@@ -1,3 +1,4 @@
+
 import dash
 from dash import html, dcc, page_container
 from functions.logger import setup_logging
@@ -36,8 +37,13 @@ app.layout = html.Div([
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
+            }),
+            dcc.Link("Login", href="/login", style={
+                "color": "white",
+                "textDecoration": "none",
+                "fontSize": "16px"
             })
-        ], style={"padding": "10px 20px"})
+        ], style={"display": "flex", "gap": "10px", "padding": "10px 20px"})
         
     ], style={
         "display": "flex",
@@ -57,5 +63,5 @@ app.layout = html.Div([
 
 
 if __name__ == "__main__":
-    print("🚀 GeoAir in esecuzione su http://127.0.0.1:8000")
+    #print("GeoAir in esecuzione su http://127.0.0.1:8000")
     app.run(debug=True, port=8000)
