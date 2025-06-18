@@ -39,6 +39,7 @@ app.layout = html.Div([
                 "fontSize": "16px"
             }),
             dcc.Link("Login", href="/login", style={
+                "marginRight": "20px",
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
