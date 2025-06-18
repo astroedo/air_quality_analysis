@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 import psycopg2
 import pandas as pd
-from functions import check_user_exists
+
 app = Flask(__name__)
 
 def db_connection():
@@ -42,6 +42,14 @@ def get_stations():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+def check_user_exists(username):
+    conn = db_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM users WHERE username = %s"
+    cursor.execute(query, (username,))
+    result = cursor.fetchone()
+    cursor.close()
+    return 1 if result else 0
 
 #LOGIN
 @app.route('/api/login', methods=['POST'])
@@ -98,13 +106,17 @@ def signin():
     # if the username or email is already taken
     elif check_user_exists(username) == 1:
         return jsonify({"message": "Username already exists"}), 409
-    else:   
-        query=f"INSERT INTO users (username, email, password) VALUES ('{username}', '{email}', '{password}')"
-        pd.read_sql_query(query, conn)
-        logged_in = True
-        conn.commit()
-        return jsonify({"message": "Signin successful"}), 200
-              
+    else: 
+        try:  
+            cursor = conn.cursor()
+            query = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
+            cursor.execute(query, (username, email, password))
+            conn.commit()
+            logged_in = True
+            return jsonify({"message": "Signin successful"}), 200
+        except Exception as e:
+            return jsonify({"message": f"Internal server error: {str(e)}"}), 500
+      
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
