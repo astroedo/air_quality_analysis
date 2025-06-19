@@ -2,11 +2,11 @@ import dash
 from dash import html, Output, Input
 from components.map_component import create_map, create_layer_group
 from components.dropdown_component import create_dropdown
-from components.fetch_pollutant import fetch_pollutant
+from components.api_fetch_pollutant import api_fetch_pollutant
 
 dash.register_page(__name__, path="/map", name="Map")
 
-df_all = fetch_pollutant()
+df_all = api_fetch_pollutant()
 pollutants =  sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
 
 # Visualization layout
@@ -38,7 +38,7 @@ def update_map(selected_pollutant):
     base_tile = create_map().children[0]
 
     if selected_pollutant in [None, "Tutti"]:
-        df = fetch_pollutant()  # Nessun filtro
+        df = api_fetch_pollutant()  # Nessun filtro
         num_sensors = df.shape[0]
         num_stations = df["nomestazione"].nunique()
         layer = create_layer_group(df, selected_pollutant)
@@ -46,7 +46,7 @@ def update_map(selected_pollutant):
         return [base_tile, layer], count_text
 
     else:
-        df = fetch_pollutant(selected_pollutant)
+        df = api_fetch_pollutant(selected_pollutant)
         pollutant_label = f"Pollutant: '{selected_pollutant}'"
         layer = create_layer_group(df, selected_pollutant)
         if not df.empty:

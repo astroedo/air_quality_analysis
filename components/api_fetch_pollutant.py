@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 from components.logger import logger
 
-def fetch_pollutant(pollutant=None):
+def api_fetch_pollutant(pollutant=None):
     try:
         url = "http://localhost:5000/api/stations"
         if pollutant:
@@ -23,7 +23,11 @@ def fetch_pollutant(pollutant=None):
 
 """
 # Example of usage:
-from functions.fetch_pollutant import fetch_pollutant
-data_all = fetch_pollutant()                # Fetch all data
-data_pm10 = fetch_pollutant("PM10")         # Fetch only PM10 pollutant data
+from components.api_fetch_pollutant import api_fetch_pollutant
+
+df_all = api_fetch_pollutant()              # Fetch all data
+df_pm10 = api_fetch_pollutant("PM10")        # Fetch only PM10 pollutant data
+
+print(df_all.head())
+print(df_pm10.head())
 """
