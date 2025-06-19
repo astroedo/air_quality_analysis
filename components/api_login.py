@@ -22,28 +22,3 @@ def api_login(username, password):
         return {"status": "error", "text": str(e)}
     
 
-    
-
-def get_login_response_ui(result):
-    status = result["status"]
-    text = result["text"]
-
-    if status == "missing":
-        return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", "Please enter username and password."]
-    if status == 200:
-        return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", "Login successful!"]
-    if status == 403:
-        return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", "Wrong password."]
-    if status == 401:
-        return (
-            {'display': 'block'},  # signup-fields
-            {'display': 'block'},  # signup-button
-            {'display': 'block'},  # back-to-login
-            {'display': 'none'},   # login-button
-            "Registration",        # page-title
-            "Username not found. Please register."  # login-output
-        )
-    if status == "error":
-        return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", f"Connection error: {text}"]
-
-    return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", f"Unexpected error: {text}"]

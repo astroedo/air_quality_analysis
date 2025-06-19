@@ -3,7 +3,7 @@
 # --- Package imports ---
 import dash
 from dash import html, dcc, Input, Output, State, callback
-from components.api_login import api_login, get_login_response_ui
+from components.api_login import api_login
 from components.api_signin import api_signin
 
 # --- Register the page ---
