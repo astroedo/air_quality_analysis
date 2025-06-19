@@ -12,17 +12,37 @@ app.layout = html.Div([
     # Navbar
     html.Div([
         # Logo and title
-        dcc.Link(
-            "GeoAir - Air Quality Analysis",
-            href="/",
-            style={
-                "fontSize": "24px",
-                "fontWeight": "bold",
-                "color": "white",
-                "padding": "10px 20px",
-                "textDecoration": "none"  # remove underline
-            }
-        ),
+        dcc.Link([
+            html.Div([
+                html.Img(
+                    src="/assets/logo.png",
+                    style = {
+                        "height" :"40px",
+                        "width" : "40px",
+                        "marginRight": "0px",
+                        "verticalAlign": "middle"
+                    }
+                ),
+                html.Span(
+                    "GeoAir - Air Quality Analysis",
+                    style={
+                        "fontSize": "24px",
+                        "fontWeight": "bold",
+                        "color": "white",
+                        "padding": "10px 20px",
+                        "textDecoration": "none"  # remove underline
+                    }
+                )
+            ], style = {
+                "display": "flex",
+                "alignItems": "center",
+                "padding": "10px 20px"
+            })
+        ], 
+        href="/",
+        style = {
+            "textDecoration": "none"
+        }),
 
         # Navigation links
         html.Div([
@@ -36,10 +56,18 @@ app.layout = html.Div([
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
+            }),
+            dcc.Link("Trends", href="/trend", style = {
+                "marginLeft": "20px",
+                "color": "white",
+                "textDecoration": "none",
+                "fontSize": "16px"
             })
-        ], style={"padding": "10px 20px"})
+
+        ], style={"padding": "10px 20px "})
         
-    ], style={
+    ],
+    style={
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "center",
