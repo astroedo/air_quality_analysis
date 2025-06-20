@@ -22,7 +22,8 @@ layout = html.Div(
         "padding": "0px"
     },
     children=[
-        html.H1("Welcome to GeoAir 🌍", style={"fontSize": "4rem", "marginBottom": "20px"}),
+        html.Img( src="/assets/logo.png", style = { "height" :"100px",  "width" : "100px", "marginRight": "0px",  "verticalAlign": "middle" }  ),
+        html.H1("Welcome to GeoAir", style={"fontSize": "4rem", "marginBottom": "20px"}),
         html.P("Monitor air quality across Lombardia with real-time data", style={"fontSize": "1.5rem"}),
         dcc.Link(
             "Go to Map ➔",
