@@ -6,6 +6,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 from components.fetch_pollutant import fetch_pollutant
 
+import pandas as pd
+import requests
+
 # Register the page
 dash.register_page(__name__, path="/trend", name="Trends")
 
@@ -14,7 +17,69 @@ df_all = fetch_pollutant()
 pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
 stations = sorted(df_all["nomestazione"].dropna().unique()) if not df_all.empty else []
 
-def fetch_sensor_data(pollutant=None, station=None):
+
+def get_idsensore(df, nometiposensore=None, nomestazione=None):
+    # print("Colonne DataFrame:", df.columns.tolist())  # Verifica colonne
+    filtered_df = df
+
+    if nometiposensore is not None:
+        filtered_df = filtered_df[filtered_df['nometiposensore'] == nometiposensore]
+
+    if nomestazione is not None:
+        filtered_df = filtered_df[filtered_df['nomestazione'] == nomestazione]
+
+    # Ottieni i valori unici di idsensore
+    idsensori = filtered_df['idsensore'].unique()
+
+    return idsensori.tolist()
+
+
+def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
+    """
+    Fetch sensor data from the /api/measurements endpoint,
+    returning a DataFrame with columns similar to the sample fetch_sensor_data function.
+    """
+
+    try:
+        url = "http://localhost:5000/api/measurements"
+        params = {}
+
+        if idsensore:
+            params['idsensore'] = idsensore
+        if datainizio:
+            params['datainizio'] = datainizio
+        if datafine:
+            params['datafine'] = datafine
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if not data:
+            return pd.DataFrame()
+
+        # Costruisci il DataFrame con colonne coerenti
+        df = pd.DataFrame(data)
+
+        # Aggiungo colonne con nomestazione e nometiposensore per compatibilità (adatta secondo i tuoi dati)
+        # Qui supponiamo idsensore = nometiposensore e non abbiamo nomestazione (puoi modificarlo)
+        df['nometiposensore'] = df.get('idsensore', None)
+        df['nomestazione'] = None  # Se hai una mappatura puoi sostituire questo con valori reali
+
+        # Ordina per data
+        if 'data' in df.columns:
+            df['data'] = pd.to_datetime(df['data'])
+            df = df.sort_values('data')
+
+        return df[['data', 'valore', 'nomestazione', 'nometiposensore', 'stato']]
+
+    except Exception as e:
+        print(f"Error fetching sensor data from API: {e}")
+        return pd.DataFrame()
+
+### OLD FUNCTION - TO BE REMOVED
+def fetch_sensor_data(pollutant=None, station=None):    
     """
     Fetch sensor data from CSV or database
     This function should be adapted to your actual data source
@@ -291,7 +356,7 @@ layout = html.Div([
     
     # Footer Info
     html.Div([
-        html.P("💡 Tip: Use the zoom and pan tools to explore specific time periods in detail.", style={
+        html.P("Tip: Use the zoom and pan tools to explore specific time periods in detail.", style={
             "textAlign": "center",
             "color": "#95a5a6",
             "fontSize": "14px",
@@ -350,7 +415,9 @@ def update_trend_chart(selected_pollutant, selected_station):
         return empty_fig, empty_summary
     
     # Fetch sensor data for the selected combination
-    df_sensor = fetch_sensor_data(selected_pollutant, selected_station)
+    # df_sensor = fetch_sensor_data(selected_pollutant, selected_station)           # old
+    id_sensore = get_idsensore(df_all, selected_pollutant, selected_station)
+    df_sensor = fetch_sensor_data_api(id_sensore)
     
     # Create chart and summary
     fig = create_trend_chart(df_sensor, selected_pollutant, selected_station)
