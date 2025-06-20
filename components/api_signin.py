@@ -2,11 +2,15 @@
 API sign-in helper.
 
 Sends a POST request to the sign-in endpoint and returns the result message.
+Maintains session using requests.Session for authenticated requests.
 Logs warnings and errors when appropriate.
 """
 
 import requests
 from components.logger import logger
+
+# Shared session with login
+session = requests.Session()
 
 def api_signin(username, password, email, confirm_password):
     """
@@ -17,15 +21,18 @@ def api_signin(username, password, email, confirm_password):
         return "Please, fill all the fields."
     if password != confirm_password:
         return "The passwords are different."
+
     try:
-        response = requests.post("http://localhost:5000/api/signin", json={
+        response = session.post("http://localhost:5000/api/signin", json={
             "username": username,
             "password": password,
             "email": email
         })
+
         if response.status_code in (200, 201):
-            return "Registration completed! Now you can log in."
+            return "Registration completed! Now you are logged in."
         return f"Error in registration: {response.status_code} - {response.text}"
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Sign-in API request failed: {e}")
         return f"Connection error: {str(e)}"
