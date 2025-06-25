@@ -2,7 +2,7 @@ import dash
 from dash import html, Output, Input
 from components.map_component import create_map, create_layer_group
 from components.dropdown_component import create_dropdown
-from functions.fetch_pollutant import fetch_pollutant
+from components.fetch_pollutant import fetch_pollutant
 
 dash.register_page(__name__, path="/map", name="Map")
 
