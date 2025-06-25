@@ -6,15 +6,17 @@ from components.fetch_pollutant import fetch_pollutant
 
 dash.register_page(__name__, path="/map", name="Map")
 
+# Precarica i valori per il dropdown
 df_all = fetch_pollutant()
-pollutants =  sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
+pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
 
-# Visualization layout
+# Layout visualizzazione
 layout = html.Div([
     html.H2("Air Quality Map", style={"textAlign": "center"}),
     html.Div([
         create_map(),
-        create_dropdown(pollutants)
+        create_dropdown(pollutants),
+        html.Div(id="station-count", style={"padding": "10px", "textAlign": "center"})
     ], style={
         "position": "relative",
         "borderRadius": "15px",
@@ -28,31 +30,29 @@ layout = html.Div([
     "margin": "auto"
 })
 
-# Callback to update the map based on selected pollutant
+# Callback per aggiornare i marker
 @dash.callback(
-    [Output("map", "children"),
+    [Output("dynamic-layer", "children"),
      Output("station-count", "children")],
     [Input("pollutant-selector", "value")]
 )
 def update_map(selected_pollutant):
-    base_tile = create_map().children[0]
+    # Recupera i dati (filtrati o tutti)
+    df = fetch_pollutant(selected_pollutant) if selected_pollutant not in [None, "Tutti"] else fetch_pollutant()
 
-    if selected_pollutant in [None, "Tutti"]:
-        df = fetch_pollutant()  # Nessun filtro
-        num_sensors = df.shape[0]
-        num_stations = df["nomestazione"].nunique()
-        layer = create_layer_group(df, selected_pollutant)
-        count_text = f"All pollutants – {num_sensors} sensors, {num_stations} stations"
-        return [base_tile, layer], count_text
+    # Crea layer dei marker
+    layer = create_layer_group(df, selected_pollutant)
 
+    # Conteggio stazioni/sensori
+    if df.empty:
+        return [], "No data."
+    
+    num_stations = df["nomestazione"].nunique()
+    num_sensors = df.shape[0]
+
+    if selected_pollutant and selected_pollutant != "Tutti":
+        text = f"Pollutant: '{selected_pollutant}' – {num_stations} stations"
     else:
-        df = fetch_pollutant(selected_pollutant)
-        pollutant_label = f"Pollutant: '{selected_pollutant}'"
-        layer = create_layer_group(df, selected_pollutant)
-        if not df.empty:
-            num_stations = df["nomestazione"].nunique()
-            count_text = f"{pollutant_label} – {num_stations} stations"
-        else:
-            count_text = "No data."
-        return [base_tile, layer], count_text
+        text = f"All pollutants – {num_sensors} sensors, {num_stations} stations"
 
+    return layer.children, text
