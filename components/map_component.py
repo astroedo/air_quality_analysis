@@ -6,7 +6,7 @@ import pandas as pd
 def get_static_layers():
     return [
         dl.TileLayer(id="base-layer", url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
-         
+        # get_regioni_layer(),
         get_province_layer()  
     ]
 
@@ -26,19 +26,12 @@ def get_province_layer():
     return dl.GeoJSON(
         id="province-lombardia-layer",
         url="/assets/province_lombardia.geojson", # Local file for Lombardia provinces
+        # url="/assets/province_lombardia_all.geojson", # Local file for Lombardia provinces and nearby ones
+        # url="https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_provinces.geojson", # all provinces
         options=dict(style=dict(color="green", weight=2, fillOpacity=0.05)),
         hoverStyle=dict(color="darkgreen", weight=3),
-        zoomToBounds=False
-    )
-
-def get_all_province_layer():
-    """Layer GeoJSON per le province della Lombardia"""
-    return dl.GeoJSON(
-        id="province-lombardia-layer",
-        url="https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_provinces.geojson",
-        options=dict(style=dict(color="green", weight=2, fillOpacity=0.05)),
-        hoverStyle=dict(color="darkgreen", weight=3),
-        zoomToBounds=False  
+        zoomToBounds=True,
+        zoomToBoundsOnClick=True
     )
 
 
