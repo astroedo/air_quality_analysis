@@ -62,6 +62,12 @@ app.layout = html.Div([
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
+            }),
+            dcc.Link("GraphProv", href="/trendprov", style = {
+                "marginLeft": "20px",
+                "color": "white",
+                "textDecoration": "none",
+                "fontSize": "16px"
             })
 
         ], style={"padding": "10px 20px "})
