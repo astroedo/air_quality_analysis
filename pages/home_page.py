@@ -67,7 +67,7 @@ def get_provinces():
         print(f"Errore chiamata API: {e}")
         return []
     except Exception as e:
-        print(f"Errore imprevisto: {e}")
+        print(f"Errore: {e}")
         return []
     
 

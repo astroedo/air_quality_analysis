@@ -68,6 +68,10 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
 
         df['nometiposensore'] = df.get('idsensore', None)
 
+        ### check what appened if nomestazione as no pollutant related value 
+        if 'nomestazione' not in df.columns:
+            df['nomestazione'] = None
+
         # order by 'data' if it exists
         if 'data' in df.columns:
             df['data'] = pd.to_datetime(df['data'])
