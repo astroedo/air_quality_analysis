@@ -118,6 +118,11 @@ def signin():
             return jsonify({"message": "Signin successful"}), 200
         except Exception as e:
             return jsonify({"message": f"Internal server error: {str(e)}"}), 500
+        
+@app.route('/api/logged', methods = ['GET'])
+def logged(logged_in):
+    return jsonify({'allowed': logged_in})
+
 
 # Endpoint to get average pollutant values by province and time     
 @app.route('/api/avg_province_time', methods=['GET'])

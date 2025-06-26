@@ -2,6 +2,9 @@
 import dash
 from dash import html, dcc, page_container
 from functions.logger import setup_logging
+from dash import Input, Output, State, callback
+import requests
+import pandas as pd
 
 setup_logging()
 
@@ -13,6 +16,7 @@ app.layout = html.Div([
     # Navbar
     html.Div([
         # Logo and title
+       # Logo and title
         dcc.Link(
             "GeoAir - Air Quality Analysis",
             href="/",
@@ -34,6 +38,7 @@ app.layout = html.Div([
                 "fontSize": "16px"
             }),
             dcc.Link("Map", href="/map", style={
+                "marginRight": "20px",
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
@@ -44,7 +49,7 @@ app.layout = html.Div([
                 "textDecoration": "none",
                 "fontSize": "16px"
             })
-        ], style={"display": "flex", "gap": "10px", "padding": "10px 20px"})
+        ], style={"padding": "10px 20px"})
         
     ], style={
         "display": "flex",
@@ -61,7 +66,6 @@ app.layout = html.Div([
     # Page container for the content
     html.Div(page_container, style={"paddingTop": "60px"})
 ])
-
 
 if __name__ == "__main__":
     #print("GeoAir in esecuzione su http://127.0.0.1:8000")
