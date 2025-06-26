@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from components.fetch_pollutant import fetch_pollutant
 import numpy as np
 import requests
+from components.logger import logger
 
 # Register the page
 dash.register_page(__name__, path="/trend", name="Trends")
@@ -71,6 +72,8 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
             df['data'] = pd.to_datetime(df['data'])
             df = df.sort_values('data')
 
+        logger.info("Sensor data fetched successfully")
+
         return df[['data', 'valore', 'nomestazione', 'nometiposensore', 'stato']]
 
     except Exception as e:
@@ -88,6 +91,7 @@ def get_provinces():
         # Trasforma in DataFrame
         df = pd.DataFrame(data, columns=["provincia"])
         
+        logger.info("Provinces fetched successfully")
         # Rimuove eventuali NaN e ritorna la lista
         return df["provincia"].dropna().tolist()
     
@@ -146,6 +150,8 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
             df = df[df["data"].dt.month <= 6]
         elif time_period == "second":
             df = df[df["data"].dt.month > 6]
+
+        logger.info(f"Data fetched successfully -> pollutant: '{pollutant}', province: '{province}' ")
 
         return df
 

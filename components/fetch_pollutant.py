@@ -15,6 +15,8 @@ def fetch_pollutant(pollutant=None):
             url += f"?pollutant={pollutant}"
         response = requests.get(url)
         response.raise_for_status()
+        
+        logger.info("Stations data fetched successfully")
         return pd.DataFrame(response.json())
     except Exception as e:
         logger.error(f"Error fetching data: {e}")
