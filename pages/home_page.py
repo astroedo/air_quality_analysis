@@ -360,10 +360,10 @@ layout = html.Div([
             # Team Member 1
             html.Div([
                 html.Div([
-                    html.H3("Alice Johnson", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("Data Scientist", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
+                    html.H3("Gianluca Bettone", style={"color": "white", "marginBottom": "10px"}),
+                    html.P("Back-end Developer", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
                     html.P(
-                        "Specialized in environmental data analysis and machine learning for air quality prediction.",
+                        "Something.",
                         style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
                     )
                 ], style={
@@ -381,10 +381,10 @@ layout = html.Div([
             # Team Member 2
             html.Div([
                 html.Div([
-                    html.H3("Marco Rodriguez", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("Full-Stack Developer", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
+                    html.H3("Mobina Faraji", style={"color": "white", "marginBottom": "10px"}),
+                    html.P("Trend visualization", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
                     html.P(
-                        "Expert in web development and database design, creating scalable solutions for environmental monitoring.",
+                        "Something.",
                         style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
                     )
                 ], style={
@@ -402,10 +402,10 @@ layout = html.Div([
             # Team Member 3
             html.Div([
                 html.Div([
-                    html.H3("Sarah Chen", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("Environmental Engineer", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
+                    html.H3("Alessia Ippolito", style={"color": "white", "marginBottom": "10px"}),
+                    html.P("Map visualization ", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
                     html.P(
-                        "Environmental engineering background with focus on air quality monitoring and pollution control systems.",
+                        "Something.",
                         style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
                     )
                 ], style={
@@ -423,10 +423,10 @@ layout = html.Div([
             # Team Member 4
             html.Div([
                 html.Div([
-                    html.H3("David Thompson", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("GIS Specialist", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
+                    html.H3("Edoardo Pessina", style={"color": "white", "marginBottom": "10px"}),
+                    html.P("Database Developer", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
                     html.P(
-                        "Geographic Information Systems expert specializing in spatial analysis and interactive mapping solutions.",
+                        "Something.",
                         style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
                     )
                 ], style={
