@@ -6,37 +6,163 @@ import pandas as pd
 import psycopg2
 from datetime import datetime, timedelta
 from components.fetch_pollutant import fetch_pollutant
+import numpy as np
+import requests
 
 # Register the page
 dash.register_page(__name__, path="/trend", name="Trends")
-
-# Database connection function
-def connect_to_postgres():
-    return psycopg2.connect(
-        host="localhost",
-        database="lombardia_air_quality",
-        user="airdata_user",
-        password="user"
-    )
 
 # Fetch initial data for dropdowns
 df_all = fetch_pollutant()
 pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
 stations = sorted(df_all["nomestazione"].dropna().unique()) if not df_all.empty else []
 
+def get_idsensore(df, nometiposensore=None, nomestazione=None):
+    # print("Colonne DataFrame:", df.columns.tolist())  # Verifica colonne
+    filtered_df = df
+
+    if nometiposensore is not None:
+        filtered_df = filtered_df[filtered_df['nometiposensore'] == nometiposensore]
+
+    if nomestazione is not None:
+        filtered_df = filtered_df[filtered_df['nomestazione'] == nomestazione]
+
+    # Ottieni i valori unici di idsensore
+    idsensori = filtered_df['idsensore'].unique()
+
+    return idsensori.tolist()
+
+
+def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
+    """
+    Fetch sensor data from the /api/measurements endpoint,
+    returning a DataFrame with columns similar to the sample fetch_sensor_data function.
+    """
+
+    try:
+        url = "http://localhost:5000/api/measurements"
+        params = {}
+
+        if idsensore:
+            params['idsensore'] = idsensore
+        if datainizio:
+            params['datainizio'] = datainizio
+        if datafine:
+            params['datafine'] = datafine
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if not data:
+            return pd.DataFrame()
+
+        # Costruisci il DataFrame con colonne coerenti
+        df = pd.DataFrame(data)
+
+        # Aggiungo colonne con nomestazione e nometiposensore per compatibilità (adatta secondo i tuoi dati)
+        # Qui supponiamo idsensore = nometiposensore e non abbiamo nomestazione (puoi modificarlo)
+        df['nometiposensore'] = df.get('idsensore', None)
+        df['nomestazione'] = None  # Se hai una mappatura puoi sostituire questo con valori reali
+
+        # Ordina per data
+        if 'data' in df.columns:
+            df['data'] = pd.to_datetime(df['data'])
+            df = df.sort_values('data')
+
+        return df[['data', 'valore', 'nomestazione', 'nometiposensore', 'stato']]
+
+    except Exception as e:
+        print(f"Error fetching sensor data from API: {e}")
+        return pd.DataFrame()
+
+
 # Get provinces for NOx analysis
 def get_provinces():
     try:
-        conn = connect_to_postgres()
-        df = pd.read_sql("SELECT DISTINCT provincia FROM station ORDER BY provincia", conn)
-        conn.close()
+        response = requests.get("http://localhost:5000/api/provinces")
+        response.raise_for_status()  # controlla errori HTTP
+        data = response.json()
+        
+        # Trasforma in DataFrame
+        df = pd.DataFrame(data, columns=["provincia"])
+        
+        # Rimuove eventuali NaN e ritorna la lista
         return df["provincia"].dropna().tolist()
-    except:
-        return ["Milano", "Roma", "Bergamo", "Brescia", "Como", "Cremona", "Mantova", "Pavia", "Sondrio", "Varese"]
+    
+    except requests.RequestException as e:
+        print(f"Errore chiamata API: {e}")
+        return []
+    except Exception as e:
+        print(f"Errore imprevisto: {e}")
+        return []
 
+
+# Fetch NOx data from the API       
+def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None, datafine=None):
+    """Fetch NOx data calling the API measurements_by_province"""
+
+    if pollutant == "NO":
+        pollutant = "Monossido di Azoto"
+    elif pollutant == "NO2":
+        pollutant = "Biossido di Azoto"
+
+    # Costruisci i parametri della query
+    params = {
+        "pollutant": pollutant,
+    }
+    if province:
+        params["provincia"] = province
+    if datainizio:
+        params["datainizio"] = datainizio
+    if datafine:
+        params["datafine"] = datafine
+
+    try:
+        # Cambia l'URL con quello corretto del tuo server API
+        url = "http://localhost:5000/api/measurements_by_province"
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # genera eccezione se errore HTTP
+
+        data = response.json()
+
+        if not data:
+            print('No data found for the specified filters.')
+            return pd.DataFrame()
+
+        # Trasforma in DataFrame
+        df = pd.DataFrame(data)
+
+        df["data"] = pd.to_datetime(df["data"])
+        df["valore"] = pd.to_numeric(df["valore"], errors="coerce")
+        df = df.dropna()
+        df.sort_values("data", inplace=True)
+        df["smoothed"] = df["valore"].rolling(window=7, min_periods=1).mean()
+
+        # Filtra per time_period
+        if time_period == "first":
+            df = df[df["data"].dt.month <= 6]
+        elif time_period == "second":
+            df = df[df["data"].dt.month > 6]
+
+        return df
+
+    except requests.RequestException as e:
+        print(f"Errore nella chiamata API: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Errore imprevisto: {e}")
+        return pd.DataFrame()
+
+
+
+
+# Pollutant categories 
 # NOx categories
 def get_nox_categories():
-    return ["NO", "NO2", "NOx", "Ossidi di Azoto"]
+    return ["NO", "NO2", "Ossidi di Azoto"]
 
 # Time period options
 def get_time_period_options():
@@ -53,95 +179,48 @@ def get_smoothing_options():
         {"label": "7-day Average", "value": "smoothed"}
     ]
 
-def fetch_sensor_data(pollutant=None, station=None):
-    """Fetch sensor data from CSV or database"""
-    try:
-        
-        dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='D')
-        
-        if pollutant and station:
-            # Simulate realistic air quality data
-            if 'PM' in pollutant:
-                base_value = 25
-                noise_level = 15
-            elif 'NO' in pollutant:
-                base_value = 35
-                noise_level = 20
-            elif 'O3' in pollutant:
-                base_value = 45
-                noise_level = 25
-            else:
-                base_value = 30
-                noise_level = 10
-                
-            seasonal = 10 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25)
-            noise = np.random.normal(0, noise_level, len(dates))
-            values = base_value + seasonal + noise
-            values = np.maximum(values, 0)
-            
-            df = pd.DataFrame({
-                'data': dates,
-                'valore': values,
-                'nomestazione': station,
-                'nometiposensore': pollutant,
-                'stato': 'V'
-            })
-            
-            return df
-        else:
-            return pd.DataFrame()
-            
-    except Exception as e:
-        print(f"Error fetching sensor data: {e}")
-        return pd.DataFrame()
+def create_nox_chart(df, pollutant, province, smoothing="raw"):
+    """Create NOx analysis chart"""
+    if df.empty:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No NOx data available for the selected filters",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False,
+            font=dict(size=16, color="gray")
+        )
+        fig.update_layout(
+            title="No NOx Data Available",
+            height=400
+        )
+        return fig
+    
+    y_data = df["valore"] if smoothing == "raw" else df["smoothed"]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df["data"],
+        y=y_data,
+        mode="lines+markers",
+        line=dict(color="DarkOrange", width=3),
+        marker=dict(size=5, color="DarkOrange"),
+        name=f"{pollutant} ({province})"
+    ))
+    
+    fig.update_layout(
+        title=f"{pollutant} Concentration in {province} - 2024",
+        xaxis_title="Date",
+        yaxis_title="Concentration (μg/m³)",
+        template="plotly_white",
+        hovermode="x unified",
+        height=500,
+        margin=dict(l=50, r=50, t=80, b=50)
+    )
+    
+    return fig
 
-def fetch_nox_data(province, pollutant, time_period="full"):
-    """Fetch NOx data from database or simulate if not available"""
-    try:
-        # Try to fetch from database first
-        conn = connect_to_postgres()
-        query = """
-            SELECT m.data, m.valore, s.provincia
-            FROM measurement m
-            JOIN station s ON m.idsensore = s.idsensore
-            WHERE s.provincia = %s AND s.nometiposensore = %s
-            AND m.stato = 'VA'
-            ORDER BY m.data
-        """
-        df = pd.read_sql(query, conn, params=(province, pollutant))
-        conn.close()
-        
-        if df.empty:
-            # Simulate data if none available
-            dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='D')
-            seasonal = 15 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25)
-            noise = np.random.normal(0, 10, len(dates))
-            values = 30 + seasonal + noise
-            values = np.maximum(values, 0)
-            
-            df = pd.DataFrame({
-                'data': dates,
-                'valore': values,
-                'provincia': province
-            })
-        
-        df["data"] = pd.to_datetime(df["data"])
-        df["valore"] = pd.to_numeric(df["valore"], errors="coerce")
-        df = df.dropna()
-        df.sort_values("data", inplace=True)
-        df["smoothed"] = df["valore"].rolling(window=7, min_periods=1).mean()
-        
-        # Filter by time period
-        if time_period == "first":
-            df = df[df["data"].dt.month <= 6]
-        elif time_period == "second":
-            df = df[df["data"].dt.month > 6]
-        
-        return df
-        
-    except Exception as e:
-        print(f"Error fetching NOx data: {e}")
-        return pd.DataFrame()
+
 
 def create_trend_chart(df, pollutant, station):
     """Create a time series chart for the selected data"""
@@ -204,46 +283,7 @@ def create_trend_chart(df, pollutant, station):
     
     return fig
 
-def create_nox_chart(df, pollutant, province, smoothing="raw"):
-    """Create NOx analysis chart"""
-    if df.empty:
-        fig = go.Figure()
-        fig.add_annotation(
-            text="No NOx data available for the selected filters",
-            xref="paper", yref="paper",
-            x=0.5, y=0.5, xanchor='center', yanchor='middle',
-            showarrow=False,
-            font=dict(size=16, color="gray")
-        )
-        fig.update_layout(
-            title="No NOx Data Available",
-            height=400
-        )
-        return fig
-    
-    y_data = df["valore"] if smoothing == "raw" else df["smoothed"]
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=df["data"],
-        y=y_data,
-        mode="lines+markers",
-        line=dict(color="DarkOrange", width=3),
-        marker=dict(size=5, color="DarkOrange"),
-        name=f"{pollutant} ({province})"
-    ))
-    
-    fig.update_layout(
-        title=f"{pollutant} Concentration in {province} - 2024",
-        xaxis_title="Date",
-        yaxis_title="Concentration (μg/m³)",
-        template="plotly_white",
-        hovermode="x unified",
-        height=500,
-        margin=dict(l=50, r=50, t=80, b=50)
-    )
-    
-    return fig
+
 
 def create_summary_cards(df, pollutant):
     """Create summary statistics cards"""
@@ -540,6 +580,7 @@ def update_station_options(selected_pollutant):
     if not selected_pollutant:
         return []
     
+    # Filter stations that have the selected pollutant
     df_filtered = df_all[df_all["nometiposensore"] == selected_pollutant]
     available_stations = sorted(df_filtered["nomestazione"].dropna().unique())
     
@@ -581,14 +622,35 @@ def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, 
                                    style={"textAlign": "center", "color": "gray", "padding": "20px"})
             return empty_fig, empty_summary
         
-        df_sensor = fetch_sensor_data(pollutant, station)
+        # Fetch sensor data for the selected combination
+        # df_sensor = fetch_sensor_data(pollutant, station)          # old
+        id_sensore = get_idsensore(df_all, pollutant, station)
+        df_sensor = fetch_sensor_data_api(id_sensore)
+        
+        # Create chart and summary
         fig = create_trend_chart(df_sensor, pollutant, station)
         summary = create_summary_cards(df_sensor, pollutant)
         
     else:
         # NOx specialized analysis
-        df_nox = fetch_nox_data(province, nox_pollutant, time_period)
+        # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
+        df_nox = fetch_nox_data(nox_pollutant, province, time_period)
         fig = create_nox_chart(df_nox, nox_pollutant, province, smoothing)
         summary = create_summary_cards(df_nox, nox_pollutant)
     
     return fig, summary
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

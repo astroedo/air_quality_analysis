@@ -21,6 +21,25 @@ def db_connection():
     )
     return conn
 
+
+@app.route('/api/provinces', methods=['GET'])
+def get_provinces():
+    """
+    Fetch distinct provinces from the database.
+    This endpoint returns a list of distinct provinces from the station table sorted in alphabetical order.
+    """
+    try:
+        conn = db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT provincia FROM station ORDER BY provincia")
+        provinces = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return jsonify(provinces)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/stations', methods=['GET'])
 def get_stations():
     pollutant = request.args.get('pollutant', default=None, type=str)  # load parameter
@@ -86,56 +105,55 @@ def get_measurements():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
+
+
+
+
 @app.route('/api/measurements_by_province', methods=['GET'])
 def get_measurements_by_province():
-    provincia = request.args.get('provincia', default=None, type=str)
-    pollutant = request.args.get('nometiposensore', default=None, type=str)
-    datainizio = request.args.get('datainizio', default=None, type=str)
-    datafine = request.args.get('datafine', default=None, type=str)
-
-    if not provincia or not pollutant:
-        return jsonify({'error': 'Missing provincia or nometiposensore'}), 400
+    provincia = request.args.get('provincia', type=str)
+    pollutant = request.args.get('pollutant', type=str)
+    datainizio = request.args.get('datainizio', type=str)
+    datafine = request.args.get('datafine', type=str)
 
     try:
         conn = db_connection()
-
-        # Primo step: ottieni idsensore per provincia + inquinante
-        query_sensori = """
-            SELECT idsensore
-            FROM station
-            WHERE provincia = %s AND nometiposensore = %s
-        """
-        sensori_df = pd.read_sql(query_sensori, conn, params=(provincia, pollutant))
-        idsensori = sensori_df['idsensore'].tolist()
-
-        if not idsensori:
-            return jsonify([])  # Nessun sensore trovato
-
-        # Secondo step: ottieni dati da measurement per questi idsensore
+        params = []
+        
         base_query = """
-            SELECT idsensore, data, valore, stato
-            FROM measurement
-            WHERE stato = 'VA' AND idsensore = ANY(%s)
+            SELECT m.data, AVG(m.valore) AS valore, s.provincia
+            FROM measurement m
+            JOIN station s ON m.idsensore = s.idsensore
+            WHERE m.stato = 'VA'
         """
-        params = [idsensori]
 
+        if provincia:
+            base_query += " AND s.provincia = %s"
+            params.append(provincia)
+        
+        if pollutant:
+            base_query += " AND s.nometiposensore = %s"
+            params.append(pollutant)
+        
         if datainizio:
-            base_query += " AND data >= %s"
+            base_query += " AND m.data >= %s"
             params.append(datainizio)
+        
         if datafine:
-            base_query += " AND data <= %s"
+            base_query += " AND m.data <= %s"
             params.append(datafine)
 
-        base_query += " ORDER BY data ASC"
+        base_query += " GROUP BY m.data, s.provincia ORDER BY m.data"
 
-        df = pd.read_sql(base_query, conn, params=tuple(params))
+        df = pd.read_sql_query(base_query, conn, params=params)
         conn.close()
 
         return jsonify(df.to_dict(orient='records'))
-
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+    
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
