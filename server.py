@@ -1,6 +1,14 @@
 from flask import Flask, jsonify, request
 import psycopg2
 import pandas as pd
+import warnings
+
+# Filtro selettivo per il warning di pandas su psycopg2
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message="pandas only supports SQLAlchemy connectable*"
+)
 
 app = Flask(__name__)
 
