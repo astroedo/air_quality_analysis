@@ -13,78 +13,64 @@ from datetime import datetime, date
 import requests
 from components.fetch_pollutant import fetch_pollutant
 import psycopg2
+from components.logger import logger
 
 dash.register_page(__name__, path="/", name="Home")
 
-# Database connection function
-def connect_to_postgres():
-    return psycopg2.connect(
-        host="localhost",
-        database="lombardia_air_quality",
-        user="airdata_user",
-        password="user"
-    )
+
 
 # Fetch measurement data for histogram
 def fetch_measurement_data(pollutant_group=None, province=None, start_date=None, end_date=None):
-    """Fetch measurement data based on filters"""
+    api_url="http://localhost:5000/api/measurements2"
+    params = {}
+    if pollutant_group:
+        params["pollutant_group"] = pollutant_group
+    if province:
+        params["province"] = province
+    if start_date:
+        params["start_date"] = start_date
+    if end_date:
+        params["end_date"] = end_date
+
     try:
-        conn = connect_to_postgres()
-        
-        # Base query
-        query = """
-        SELECT m.valore, s.nometiposensore, s.provincia, s.nomestazione, m.data
-        FROM measurement m
-        JOIN station s ON m.idsensore = s.idsensore
-        WHERE m.valore IS NOT NULL AND s.lat IS NOT NULL AND s.lng IS NOT NULL
-        """
-        
-        params = []
-        
-        # Add filters
-        if pollutant_group and pollutant_group != "All":
-            if pollutant_group == "PM":
-                query += " AND (s.nometiposensore LIKE 'PM%')"
-            elif pollutant_group == "NOx":
-                query += " AND (s.nometiposensore IN ('NO', 'NO2', 'NOx'))"
-            elif pollutant_group == "Ozone":
-                query += " AND s.nometiposensore = 'O3'"
-            else:
-                query += " AND s.nometiposensore = %s"
-                params.append(pollutant_group)
-        
-        if province and province != "All":
-            query += " AND s.provincia = %s"
-            params.append(province)
-            
-        if start_date:
-            query += " AND m.data >= %s"
-            params.append(start_date)
-            
-        if end_date:
-            query += " AND m.data <= %s"
-            params.append(end_date)
-            
-        query += " ORDER BY m.data DESC LIMIT 10000"
-        
-        df = pd.read_sql_query(query, conn, params=params)
-        conn.close()
+        response = requests.get(api_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, dict) and data.get("error"):
+            print(f"API error: {data['error']}")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data)
+        logger.info("Measurement data fetched successfully")
         return df
-        
-    except Exception as e:
-        print(f"Error fetching measurement data: {e}")
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
         return pd.DataFrame()
+
+
 
 # Get available provinces
 def get_provinces():
-    """Get list of available provinces"""
     try:
-        conn = connect_to_postgres()
-        df = pd.read_sql("SELECT DISTINCT provincia FROM station WHERE provincia IS NOT NULL ORDER BY provincia", conn)
-        conn.close()
-        return df['provincia'].tolist()
-    except:
+        response = requests.get("http://localhost:5000/api/provinces")
+        response.raise_for_status()  # check for HTTP errors
+        data = response.json()
+        
+        # transform the list of provinces into a DataFrame
+        df = pd.DataFrame(data, columns=["provincia"])
+        
+        logger.info("Provinces fetched successfully")
+        # Rimuove eventuali NaN e ritorna la lista
+        return df["provincia"].dropna().tolist()
+    
+    except requests.RequestException as e:
+        print(f"Errore chiamata API: {e}")
         return []
+    except Exception as e:
+        print(f"Errore imprevisto: {e}")
+        return []
+    
+
 
 # Create map with filtered stations
 def create_filtered_map(pollutant_group=None, province=None):
@@ -451,21 +437,6 @@ layout = html.Div([
         "marginTop": "40px"
     }),
     
-    # Footer
-    html.Div([
-        html.P(
-            "© 2025 GeoAir Team | Data source: Lombardia Environmental Agency", 
-            style={
-                "textAlign": "center",
-                "color": "#95a5a6",
-                "margin": "0",
-                "fontSize": "14px"
-            }
-        )
-    ], style={
-        "backgroundColor": "#2c3e50",
-        "padding": "20px"
-    })
 ])
 
 # Callbacks

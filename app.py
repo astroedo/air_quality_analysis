@@ -66,8 +66,7 @@ app.layout = html.Div([
 
         ], style={"padding": "10px 20px "})
         
-    ],
-    style={
+    ], style={
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "center",
@@ -80,8 +79,34 @@ app.layout = html.Div([
     }),
 
     # Page container for the content
-    html.Div(page_container, style={"paddingTop": "60px"})
-])
+    html.Div(page_container, style={
+        "flex": "1",
+        "paddingTop": "60px",  # spazio per navbar fissa
+        "overflow": "auto"     # permette scroll se contenuto lungo
+    }),
+    
+    # Footer
+    html.Div([
+        html.P(
+            "© 2025 GeoAir Team | Data source: Lombardia Environmental Agency", 
+            style={
+                "textAlign": "center",
+                "color": "#95a5a6",
+                "margin": "0",
+                "fontSize": "14px"
+            }
+        )
+    ], style={
+        "backgroundColor": "#2c3e50",
+        "padding": "20px"
+    })
+],
+style={
+    "display": "flex",
+    "flexDirection": "column",
+    "minHeight": "100vh"   # altezza minima viewport
+})
+
 
 
 if __name__ == "__main__":
