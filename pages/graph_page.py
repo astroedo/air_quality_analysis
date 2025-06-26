@@ -10,8 +10,12 @@ import numpy as np
 import requests
 from components.logger import logger
 
+
+
 # Register the page
 dash.register_page(__name__, path="/trend", name="Trends")
+
+
 
 # Fetch initial data for dropdowns
 df_all = fetch_pollutant()
@@ -19,7 +23,7 @@ pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.e
 stations = sorted(df_all["nomestazione"].dropna().unique()) if not df_all.empty else []
 
 def get_idsensore(df, nometiposensore=None, nomestazione=None):
-    # print("Colonne DataFrame:", df.columns.tolist())  # Verifica colonne
+    # print("DataFrame:", df.columns.tolist())  # check columns in the DataFrame
     filtered_df = df
 
     if nometiposensore is not None:
@@ -28,7 +32,7 @@ def get_idsensore(df, nometiposensore=None, nomestazione=None):
     if nomestazione is not None:
         filtered_df = filtered_df[filtered_df['nomestazione'] == nomestazione]
 
-    # Ottieni i valori unici di idsensore
+    # obtain unique idsensore values
     idsensori = filtered_df['idsensore'].unique()
 
     return idsensori.tolist()
@@ -59,15 +63,12 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
         if not data:
             return pd.DataFrame()
 
-        # Costruisci il DataFrame con colonne coerenti
+        # build DataFrame
         df = pd.DataFrame(data)
 
-        # Aggiungo colonne con nomestazione e nometiposensore per compatibilità (adatta secondo i tuoi dati)
-        # Qui supponiamo idsensore = nometiposensore e non abbiamo nomestazione (puoi modificarlo)
         df['nometiposensore'] = df.get('idsensore', None)
-        df['nomestazione'] = None  # Se hai una mappatura puoi sostituire questo con valori reali
 
-        # Ordina per data
+        # order by 'data' if it exists
         if 'data' in df.columns:
             df['data'] = pd.to_datetime(df['data'])
             df = df.sort_values('data')
@@ -85,10 +86,10 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
 def get_provinces():
     try:
         response = requests.get("http://localhost:5000/api/provinces")
-        response.raise_for_status()  # controlla errori HTTP
+        response.raise_for_status()  # check for HTTP errors
         data = response.json()
         
-        # Trasforma in DataFrame
+        # transform the list of provinces into a DataFrame
         df = pd.DataFrame(data, columns=["provincia"])
         
         logger.info("Provinces fetched successfully")
@@ -112,7 +113,7 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
     elif pollutant == "NO2":
         pollutant = "Biossido di Azoto"
 
-    # Costruisci i parametri della query
+    # build the query parameters
     params = {
         "pollutant": pollutant,
     }
@@ -124,11 +125,10 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
         params["datafine"] = datafine
 
     try:
-        # Cambia l'URL con quello corretto del tuo server API
         url = "http://localhost:5000/api/measurements_by_province"
 
         response = requests.get(url, params=params)
-        response.raise_for_status()  # genera eccezione se errore HTTP
+        response.raise_for_status()  
 
         data = response.json()
 
@@ -136,7 +136,7 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
             print('No data found for the specified filters.')
             return pd.DataFrame()
 
-        # Trasforma in DataFrame
+        # DataFrame
         df = pd.DataFrame(data)
 
         df["data"] = pd.to_datetime(df["data"])
@@ -145,7 +145,7 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
         df.sort_values("data", inplace=True)
         df["smoothed"] = df["valore"].rolling(window=7, min_periods=1).mean()
 
-        # Filtra per time_period
+        # Filter time_period
         if time_period == "first":
             df = df[df["data"].dt.month <= 6]
         elif time_period == "second":

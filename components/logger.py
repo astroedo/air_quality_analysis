@@ -2,12 +2,13 @@
 Basic logging setup
 Used to track app behavior and errors during execution.
 Like print but more professional and flexible.
+(useful in FRONTEND API development and debugging)
 """
 
 import logging
 
 def setup_logging():
-    # Configura il logging con livello INFO e formato con timestamp, livello e messaggio
+    # print timestamp, log level, and message
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
