@@ -1,14 +1,19 @@
 import dash
 from dash import html, dcc, page_container
 from components.logger import setup_logging
-
+from dash import Input, Output, State, callback, no_update
 setup_logging()
 
 app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True)
 server = app.server
 
+
 app.layout = html.Div([
 
+    dcc.Store(id="session", storage_type="session"),
+    dcc.Location(id="logout-redirect"),
+    dcc.Location(id="url"),  # Per abilitare i redirect #
+     #
     # Navbar
     html.Div([
         # Logo and title
@@ -53,16 +58,30 @@ app.layout = html.Div([
                 "fontSize": "16px"
             }),
             dcc.Link("Map", href="/map", style={
+                "marginRight": "20px",
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
             }),
             dcc.Link("Trends", href="/trend", style = {
-                "marginLeft": "20px",
+                "marginRight": "20px",
                 "color": "white",
                 "textDecoration": "none",
                 "fontSize": "16px"
-            })
+            }),
+            dcc.Link("Login", href="/login", style={
+                "marginRight": "20px",
+                "color": "white",
+                "textDecoration": "none",
+                "fontSize": "16px"
+            }),
+            html.Button("Logout", id="logout-button", n_clicks=0, style={
+            "backgroundColor": "transparent",
+            "color": "white",
+            "border": "none",
+            "cursor": "pointer",
+            "fontSize": "16px"
+        })
 
         ], style={"padding": "10px 20px "})
         
@@ -107,7 +126,16 @@ style={
     "minHeight": "100vh"   # altezza minima viewport
 })
 
-
+@callback(
+    [Output("session", "data", allow_duplicate=True),
+     Output("logout-redirect", "href")],
+    Input("logout-button", "n_clicks"),
+    prevent_initial_call=True
+)
+def logout(n_clicks):
+    if n_clicks:
+        return {}, "/"  # oppure "/" per andare alla home
+    return no_update, no_update
 
 if __name__ == "__main__":
     print("🚀 GeoAir in esecuzione su http://127.0.0.1:8000")
