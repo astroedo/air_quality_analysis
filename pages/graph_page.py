@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc, Output, Input, callback
+from dash import html, dcc, Output, Input, callback, no_update
 import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
@@ -375,6 +375,8 @@ def create_summary_cards(df, pollutant):
 
 # Layout
 layout = html.Div([
+    dcc.Store(id="session", storage_type="session"),
+    html.Div(id="redirect-trend"),
     # Page Header
     html.Div([
         html.H1("📈 Air Quality Trends Analysis", style={
@@ -532,6 +534,7 @@ layout = html.Div([
     
     # Chart Container
     html.Div([
+        
         dcc.Graph(
             id="trend-chart",
             config={
@@ -571,13 +574,14 @@ layout = html.Div([
     [Input("analysis-mode", "value")]
 )
 def toggle_controls(mode):
+    
     if mode == "general":
         return {"backgroundColor": "white", "padding": "20px", "borderRadius": "10px", 
                 "boxShadow": "0 2px 8px rgba(0,0,0,0.1)", "margin": "0 20px 20px 20px"}, \
-               {"display": "none"}
+            {"display": "none"}
     else:
         return {"display": "none"}, \
-               {"backgroundColor": "white", "padding": "20px", "borderRadius": "10px", 
+            {"backgroundColor": "white", "padding": "20px", "borderRadius": "10px", 
                 "boxShadow": "0 2px 8px rgba(0,0,0,0.1)", "margin": "0 20px 20px 20px"}
 
 # Callback to update station options based on selected pollutant (for general analysis)
@@ -599,56 +603,69 @@ def update_station_options(selected_pollutant):
 # Main callback to update chart and summary
 @callback(
     [Output("trend-chart", "figure"),
-     Output("summary-cards", "children")],
+     Output("summary-cards", "children"),
+     Output("redirect-trend", "children")],
     [Input("analysis-mode", "value"),
      Input("trend-pollutant-selector", "value"),
      Input("trend-station-selector", "value"),
      Input("nox-province-selector", "value"),
      Input("nox-pollutant-selector", "value"),
      Input("nox-time-period", "value"),
-     Input("nox-smoothing", "value")]
+     Input("nox-smoothing", "value"),
+     Input("session", "data")]
 )
-def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, time_period, smoothing):
+def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, time_period, smoothing, session_data):
     """Update the chart and summary based on selected analysis mode and parameters"""
-    
-    if mode == "general":
-        # General pollutant analysis
-        if not pollutant or not station:
-            empty_fig = go.Figure()
-            empty_fig.add_annotation(
-                text="Please select both pollutant and station",
-                xref="paper", yref="paper",
-                x=0.5, y=0.5, xanchor='center', yanchor='middle',
-                showarrow=False,
-                font=dict(size=16, color="gray")
-            )
-            empty_fig.update_layout(
-                title="Select Filters",
-                height=400,
-                xaxis=dict(showgrid=False, showticklabels=False),
-                yaxis=dict(showgrid=False, showticklabels=False)
-            )
-            empty_summary = html.Div("Select pollutant and station to view summary", 
-                                   style={"textAlign": "center", "color": "gray", "padding": "20px"})
-            return empty_fig, empty_summary
-        
-        # Fetch sensor data for the selected combination
-        # df_sensor = fetch_sensor_data(pollutant, station)          # old
-        id_sensore = get_idsensore(df_all, pollutant, station)
-        df_sensor = fetch_sensor_data_api(id_sensore)
-        
-        # Create chart and summary
-        fig = create_trend_chart(df_sensor, pollutant, station)
-        summary = create_summary_cards(df_sensor, pollutant)
-        
+    if not session_data or not session_data.get("logged_in"):
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Redirecting to login...",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False,
+            font=dict(size=16, color="gray")
+        )
+        fig.update_layout(height=300)
+        return fig, "", dcc.Location(href="/login", id="redirect-now")
     else:
-        # NOx specialized analysis
-        # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
-        df_nox = fetch_nox_data(nox_pollutant, province, time_period)
-        fig = create_nox_chart(df_nox, nox_pollutant, province, smoothing)
-        summary = create_summary_cards(df_nox, nox_pollutant)
-    
-    return fig, summary
+        if mode == "general":
+            # General pollutant analysis
+            if not pollutant or not station:
+                empty_fig = go.Figure()
+                empty_fig.add_annotation(
+                    text="Please select both pollutant and station",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                    showarrow=False,
+                    font=dict(size=16, color="gray")
+                )
+                empty_fig.update_layout(
+                    title="Select Filters",
+                    height=400,
+                    xaxis=dict(showgrid=False, showticklabels=False),
+                    yaxis=dict(showgrid=False, showticklabels=False)
+                )
+                empty_summary = html.Div("Select pollutant and station to view summary", 
+                                    style={"textAlign": "center", "color": "gray", "padding": "20px"})
+                return empty_fig, empty_summary, no_update
+            
+            # Fetch sensor data for the selected combination
+            # df_sensor = fetch_sensor_data(pollutant, station)          # old
+            id_sensore = get_idsensore(df_all, pollutant, station)
+            df_sensor = fetch_sensor_data_api(id_sensore)
+            
+            # Create chart and summary
+            fig = create_trend_chart(df_sensor, pollutant, station)
+            summary = create_summary_cards(df_sensor, pollutant)
+            
+        else:
+            # NOx specialized analysis
+            # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
+            df_nox = fetch_nox_data(nox_pollutant, province, time_period)
+            fig = create_nox_chart(df_nox, nox_pollutant, province, smoothing)
+            summary = create_summary_cards(df_nox, nox_pollutant)
+        
+        return fig, summary, no_update
 
 
 
