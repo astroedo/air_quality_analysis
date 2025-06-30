@@ -6,10 +6,11 @@ setup_logging()
 
 app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True)
 server = app.server
+
+
 app.layout = html.Div([
 
     dcc.Store(id="session", storage_type="session"),
-
     dcc.Location(id="logout-redirect"),
     dcc.Location(id="url"),  # Per abilitare i redirect #
      #
