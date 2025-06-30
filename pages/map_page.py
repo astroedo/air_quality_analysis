@@ -12,7 +12,7 @@ import geopandas as gpd
 import dash_leaflet as dl
 import json
 
-province = gpd.read_file('Lombardy_admin2.shp')
+province = gpd.read_file('maps/Lombardy_admin2.shp')
 province = province.to_crs(epsg=4326)  # Assicurati che sia in WGS84 (lat/lon)
 
 dash.register_page(__name__, path="/map", name="Map")
