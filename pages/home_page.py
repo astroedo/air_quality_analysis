@@ -72,44 +72,35 @@ def get_provinces():
     
 
 
-# Create map with filtered stations
 def create_filtered_map(pollutant_group=None, province=None):
     """Create map with filtered stations"""
     try:
-        # Fetch station data
         df_stations = fetch_pollutant()
-        
+
         if df_stations.empty:
             return dl.Map(
                 center=[45.5, 9.2],
                 zoom=8,
-                children=[
-                    dl.TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
-                ],
+                children=[dl.TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")],
                 style={"width": "100%", "height": "400px"}
             )
         
-        # Apply filters
-        if pollutant_group and pollutant_group != "All":
-            if pollutant_group == "PM":
-                df_stations = df_stations[df_stations["nometiposensore"].str.contains("PM", na=False)]
-            elif pollutant_group == "NOx":
-                df_stations = df_stations[df_stations["nometiposensore"].isin(["NO", "NO2", "NOx"])]
-            elif pollutant_group == "Ozone":
-                df_stations = df_stations[df_stations["nometiposensore"] == "O3"]
-            else:
-                df_stations = df_stations[df_stations["nometiposensore"] == pollutant_group]
-        
+        logger.info("Filtering stations for pollutant group: %s, province: %s", pollutant_group, province)
+
+        # print(f"Filtering stations for pollutant group: {pollutant_group}, province: {province}") # debug
+
+        # Applica filtri usando la funzione helper
+        filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)
+
         if province and province != "All":
-            df_stations = df_stations[df_stations["provincia"] == province]
-        
-        # Group stations by location
-        grouped = df_stations.groupby(["nomestazione", "lat", "lng"]).agg({
+            filtered = filtered[filtered["provincia"] == province]
+
+        # Group by station coordinates
+        grouped = filtered.groupby(["nomestazione", "lat", "lng"]).agg({
             "nometiposensore": list,
             "provincia": "first"
         }).reset_index()
-        
-        # Create markers
+
         markers = []
         for _, row in grouped.iterrows():
             if pd.notna(row["lat"]) and pd.notna(row["lng"]):
@@ -120,13 +111,11 @@ def create_filtered_map(pollutant_group=None, province=None):
                     html.P("Pollutants:", style={"margin": "5px 0 2px 0", "fontWeight": "bold"}),
                     html.Ul([html.Li(p) for p in row["nometiposensore"]], style={"margin": "0", "paddingLeft": "20px"})
                 ]
-                
-                marker = dl.Marker(
+                markers.append(dl.Marker(
                     position=[row["lat"], row["lng"]],
                     children=dl.Popup(popup_content)
-                )
-                markers.append(marker)
-        
+                ))
+
         return dl.Map(
             center=[45.5, 9.2],
             zoom=8,
@@ -136,7 +125,7 @@ def create_filtered_map(pollutant_group=None, province=None):
             ],
             style={"width": "100%", "height": "400px", "borderRadius": "8px"}
         )
-        
+
     except Exception as e:
         print(f"Error creating map: {e}")
         return dl.Map(
@@ -439,7 +428,25 @@ layout = html.Div([
     
 ])
 
-# Callbacks
+# Funzione helper per filtrare i sensori in base al gruppo inquinante
+def filter_by_pollutant_group(df, pollutant_group):
+    df["nometiposensore"] = df["nometiposensore"].str.strip().str.title()
+
+    if pollutant_group == "PM":
+        return df[df["nometiposensore"].isin([
+            "Pm10", "Pm10 (Sm2005)", "Particolato Totale Sospeso", "Particelle Sospese Pm2.5"
+        ])]
+    elif pollutant_group == "NOx":
+        return df[df["nometiposensore"].isin([
+            "Monossido Di Azoto", "Biossido Di Azoto", "Ossidi Di Azoto"
+        ])]
+    elif pollutant_group == "Ozone":
+        return df[df["nometiposensore"] == "Ozono"]
+    elif pollutant_group and pollutant_group != "All":
+        return df[df["nometiposensore"] == pollutant_group.title()]
+    return df
+
+
 @callback(
     [Output("sensor-map", "children"),
      Output("station-info", "children"),
@@ -450,154 +457,97 @@ layout = html.Div([
      Input("date-range-picker", "end_date")]
 )
 def update_dashboard(pollutant_group, province, start_date, end_date):
-    # Update map
+    # Mappa aggiornata
     sensor_map = create_filtered_map(pollutant_group, province)
-    
-    # Get station count info
+
+    # === Station info ===
     try:
         df_stations = fetch_pollutant()
         if not df_stations.empty:
-            # Apply filters for counting
-            filtered_stations = df_stations.copy()
-            
-            if pollutant_group and pollutant_group != "All":
-                if pollutant_group == "PM":
-                    filtered_stations = filtered_stations[filtered_stations["nometiposensore"].str.contains("PM", na=False)]
-                elif pollutant_group == "NOx":
-                    filtered_stations = filtered_stations[filtered_stations["nometiposensore"].isin(["NO", "NO2", "NOx"])]
-                elif pollutant_group == "Ozone":
-                    filtered_stations = filtered_stations[filtered_stations["nometiposensore"] == "O3"]
-            
+            filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)
             if province and province != "All":
-                filtered_stations = filtered_stations[filtered_stations["provincia"] == province]
-            
-            num_stations = filtered_stations["nomestazione"].nunique()
-            num_sensors = len(filtered_stations)
+                filtered = filtered[filtered["provincia"] == province]
+            num_stations = filtered["nomestazione"].nunique()
+            num_sensors = len(filtered)
             station_info = f"📍 {num_stations} stations with {num_sensors} sensors"
         else:
             station_info = "No station data available"
-    except:
-        station_info = "Error loading station information"
-    
-    # Update sensor distribution chart
+    except Exception as e:
+        station_info = f"Error loading station info: {e}"
+
+    # === Histogram (Sensor distribution) ===
     try:
         df_stations = fetch_pollutant()
-        if not df_stations.empty:
-            # Apply filters for sensor distribution
-            filtered_stations = df_stations.copy()
-            
-            if pollutant_group and pollutant_group != "All":
-                if pollutant_group == "PM":
-                    filtered_stations = filtered_stations[filtered_stations["nometiposensore"].str.contains("PM", na=False)]
-                elif pollutant_group == "NOx":
-                    filtered_stations = filtered_stations[filtered_stations["nometiposensore"].isin(["NO", "NO2", "NOx"])]
-                elif pollutant_group == "Ozone":
-                    filtered_stations = filtered_stations[filtered_stations["nometiposensore"] == "O3"]
-            
-            if province and province != "All":
-                filtered_stations = filtered_stations[filtered_stations["provincia"] == province]
-            
-            if not filtered_stations.empty:
-                # Create sensor distribution by province
-                if len(filtered_stations['provincia'].unique()) > 1:
-                    # Show distribution by province
-                    province_counts = filtered_stations['provincia'].value_counts()
-                    
-                    fig = px.bar(
-                        x=province_counts.index,
-                        y=province_counts.values,
-                        title="Sensor Distribution by Province",
-                        labels={'x': 'Province', 'y': 'Number of Sensors'},
-                        color_discrete_sequence=['rgb(19, 129, 159)']
-                    )
-                else:
-                    # Show distribution by pollutant type when single province selected
-                    pollutant_counts = filtered_stations['nometiposensore'].value_counts().head(10)
-                    
-                    fig = px.bar(
-                        x=pollutant_counts.values,
-                        y=pollutant_counts.index,
-                        orientation='h',
-                        title="Sensor Distribution by Pollutant Type",
-                        labels={'x': 'Number of Sensors', 'y': 'Pollutant Type'},
-                        color_discrete_sequence=['rgb(19, 129, 159)']
-                    )
-                
-                fig.update_layout(
-                    showlegend=False,
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
-                    font=dict(size=12),
-                    title_x=0.5,
-                    margin=dict(l=50, r=50, t=50, b=50),
-                    height=400
-                )
-                
-                # Add total count annotation
-                total_sensors = len(filtered_stations)
-                fig.add_annotation(
-                    text=f"Total Sensors: {total_sensors}",
-                    xref="paper", yref="paper",
-                    x=0.98, y=0.98,
-                    xanchor="right", yanchor="top",
-                    showarrow=False,
-                    bgcolor="rgba(255,255,255,0.8)",
-                    bordercolor="gray",
-                    borderwidth=1,
-                    font=dict(size=14, color="rgb(19, 129, 159)")
+        if df_stations.empty:
+            raise ValueError("Empty station dataset")
+
+        filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)
+        if province and province != "All":
+            filtered = filtered[filtered["provincia"] == province]
+
+        if not filtered.empty:
+            if len(filtered["provincia"].unique()) > 1:
+                # Distribuzione per provincia
+                counts = filtered["provincia"].value_counts()
+                fig = px.bar(
+                    x=counts.index,
+                    y=counts.values,
+                    title="Sensor Distribution by Province",
+                    labels={"x": "Province", "y": "Number of Sensors"},
+                    color_discrete_sequence=["rgb(19, 129, 159)"]
                 )
             else:
-                # No data after filtering
-                fig = go.Figure()
-                fig.add_annotation(
-                    text="No sensors found for the selected filters",
-                    xref="paper", yref="paper",
-                    x=0.5, y=0.5,
-                    xanchor="center", yanchor="middle",
-                    showarrow=False,
-                    font=dict(size=16, color="gray")
+                # Distribuzione per tipo di sensore
+                counts = filtered["nometiposensore"].value_counts().head(10)
+                fig = px.bar(
+                    x=counts.values,
+                    y=counts.index,
+                    orientation="h",
+                    title="Sensor Distribution by Pollutant Type",
+                    labels={"x": "Number of Sensors", "y": "Pollutant Type"},
+                    color_discrete_sequence=["rgb(19, 129, 159)"]
                 )
-                fig.update_layout(
-                    xaxis=dict(showgrid=False, showticklabels=False, title=""),
-                    yaxis=dict(showgrid=False, showticklabels=False, title=""),
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
-                    height=400
-                )
-        else:
-            # Empty plot when no station data
-            fig = go.Figure()
-            fig.add_annotation(
-                text="No sensor data available",
-                xref="paper", yref="paper",
-                x=0.5, y=0.5,
-                xanchor="center", yanchor="middle",
-                showarrow=False,
-                font=dict(size=16, color="gray")
-            )
+
             fig.update_layout(
-                xaxis=dict(showgrid=False, showticklabels=False, title=""),
-                yaxis=dict(showgrid=False, showticklabels=False, title=""),
-                plot_bgcolor='white',
-                paper_bgcolor='white',
+                showlegend=False,
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                font=dict(size=12),
+                title_x=0.5,
+                margin=dict(l=50, r=50, t=50, b=50),
                 height=400
             )
+
+            fig.add_annotation(
+                text=f"Total Sensors: {len(filtered)}",
+                xref="paper", yref="paper",
+                x=0.98, y=0.98,
+                xanchor="right", yanchor="top",
+                showarrow=False,
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="gray",
+                borderwidth=1,
+                font=dict(size=14, color="rgb(19, 129, 159)")
+            )
+        else:
+            raise ValueError("No sensors found for the selected filters")
+
     except Exception as e:
-        # Error handling for sensor distribution chart
         fig = go.Figure()
         fig.add_annotation(
-            text=f"Error loading sensor data: {str(e)}",
+            text=f"No sensor data available: {e}",
             xref="paper", yref="paper",
             x=0.5, y=0.5,
             xanchor="center", yanchor="middle",
             showarrow=False,
-            font=dict(size=14, color="red")
+            font=dict(size=16, color="gray")
         )
         fig.update_layout(
             xaxis=dict(showgrid=False, showticklabels=False),
             yaxis=dict(showgrid=False, showticklabels=False),
-            plot_bgcolor='white',
+            plot_bgcolor="white",
+            paper_bgcolor="white",
             height=400
         )
-    
+
     return sensor_map, station_info, fig

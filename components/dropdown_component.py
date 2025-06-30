@@ -4,8 +4,11 @@ Create a pollutant selection dropdown with a label and a div for station count.
 
 from dash import dcc, html
 
-def create_dropdown(pollutants):
-    options = [{"label": "Tutti", "value": "Tutti"}] + [{"label": p, "value": p} for p in pollutants]
+def create_dropdown(pollutants, show_all=True):
+    if show_all:
+        options = [{"label": "Tutti", "value": "Tutti"}] + [{"label": p, "value": p} for p in pollutants]
+    else:
+        options = [{"label": p, "value": p} for p in pollutants]
 
     return html.Div([
         html.Label("Select pollutant:"),

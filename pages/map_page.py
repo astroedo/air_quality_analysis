@@ -38,7 +38,7 @@ layout = html.Div([
                 ],
                 style={"width": "100%", "height": "600px"}
             ),
-            create_dropdown(pollutants)
+            create_dropdown(pollutants, show_all=False),
         ], style={"position": "relative"}),
         
         # Legenda posizionata accanto alla mappa
