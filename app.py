@@ -13,7 +13,7 @@ app.layout = html.Div([
     dcc.Store(id="session", storage_type="session"),
     dcc.Location(id="logout-redirect"),
     dcc.Location(id="url"),  # Per abilitare i redirect #
-     #
+    #
     # Navbar
     html.Div([
         # Logo and title
@@ -100,8 +100,8 @@ app.layout = html.Div([
     # Page container for the content
     html.Div(page_container, style={
         "flex": "1",
-        "paddingTop": "60px",  # spazio per navbar fissa
-        "overflow": "auto"     # permette scroll se contenuto lungo
+        "paddingTop": "60px",  # fixed navbar height
+        "overflow": "auto"     
     }),
     
     # Footer
