@@ -101,7 +101,7 @@ def get_provinces():
         return df["provincia"].dropna().tolist()
     
     except requests.RequestException as e:
-        print(f"Errore chiamata API: {e}")
+        print(f"Errore API: {e}")
         return []
     except Exception as e:
         print(f"Errore imprevisto: {e}")
@@ -375,7 +375,6 @@ def create_summary_cards(df, pollutant):
 
 # Layout
 layout = html.Div([
-    dcc.Store(id="session", storage_type="session"),
     html.Div(id="redirect-trend"),
     # Page Header
     html.Div([

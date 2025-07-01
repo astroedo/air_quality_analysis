@@ -22,7 +22,6 @@ pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.e
 
 # Layout aggiornato per includere la legenda
 layout = html.Div([
-    dcc.Store(id="session", storage_type="session"),
     html.Div(id="redirect-map"),
     html.H2("Air Quality Map", style={"textAlign": "center"}),
 

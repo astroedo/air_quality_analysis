@@ -12,7 +12,7 @@ app.layout = html.Div([
 
     dcc.Store(id="session", storage_type="session"),
     dcc.Location(id="logout-redirect"),
-    dcc.Location(id="url"),  # Per abilitare i redirect #
+    # dcc.Location(id="url"),   Per abilitare i redirect #
     #
     # Navbar
     html.Div([
