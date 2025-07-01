@@ -102,7 +102,7 @@ def create_filtered_map(pollutant_group=None, province=None):
                 ))
 
         return dl.Map(
-            center=[45.5, 9.2],
+            center=[45.6997, 9.9276],
             zoom=8,
             children=[
                 dl.TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
