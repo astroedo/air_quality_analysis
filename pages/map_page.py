@@ -66,11 +66,11 @@ layout = html.Div([
     html.Div([  # DATE + ISTOGRAMMA
         dcc.DatePickerRange(
             id="date-picker-range",
-            min_date_allowed=datetime(2024, 1, 1),
-            max_date_allowed=datetime(2025, 1, 1),
-            start_date_placeholder_text="Start Period",
-            end_date_placeholder_text="End Period",
-            calendar_orientation='vertical',
+            min_date_allowed=datetime(2020, 1, 1),
+            max_date_allowed=datetime(2025, 12, 31),
+            start_date=datetime(2024, 12, 1),
+            end_date=datetime(2024, 12, 31),
+            display_format="YYYY-MM-DD",
             style={
                 "border": "1px solid #ccc",
                 "borderRadius": "8px",

@@ -185,8 +185,9 @@ def get_time_period_options():
 # Data smoothing options
 def get_smoothing_options():
     return [
-        {"label": "Raw Data", "value": "raw"},
-        {"label": "7-day Average", "value": "smoothed"}
+        {"label": "Daily average", "value": "raw"},
+        {"label": "7-day average", "value": "smoothed_7"},
+        {"label": "14-day average", "value": "smoothed_14"}
     ]
 
 def create_nox_chart(df, pollutant, province, smoothing="raw"):
@@ -194,14 +195,14 @@ def create_nox_chart(df, pollutant, province, smoothing="raw"):
     if df.empty:
         fig = go.Figure()
         fig.add_annotation(
-            text="No NOx data available for the selected filters",
+            text="No data available for the selected filters",
             xref="paper", yref="paper",
             x=0.5, y=0.5, xanchor='center', yanchor='middle',
             showarrow=False,
             font=dict(size=16, color="gray")
         )
         fig.update_layout(
-            title="No NOx Data Available",
+            title="No Data Available",
             height=400
         )
         return fig
@@ -399,7 +400,7 @@ layout = html.Div([
             id="analysis-mode",
             options=[
                 {"label": " General Pollutant Analysis", "value": "general"},
-                {"label": " NOx Specialized Analysis", "value": "nox"}
+                {"label": " Specialized Analysis", "value": "nox"}
             ],
             value="general",
             style={"fontSize": "16px"},
@@ -456,7 +457,7 @@ layout = html.Div([
         "margin": "0 20px 20px 20px"
     }),
     
-    # NOx Analysis Controls
+    # Specialized Analysis Controls
     html.Div(id="nox-controls", children=[
         html.Div([
             html.Div([
@@ -489,20 +490,7 @@ layout = html.Div([
                 )
             ], style={"flex": "1", "marginRight": "15px"}),
             
-            html.Div([
-                html.Label("📅 Time Period:", style={
-                    "fontWeight": "bold",
-                    "marginBottom": "8px",
-                    "display": "block",
-                    "color": "#2c3e50"
-                }),
-                dcc.Dropdown(
-                    id="nox-time-period",
-                    options=get_time_period_options(),
-                    value="full",
-                    clearable=False
-                )
-            ], style={"flex": "1", "marginRight": "15px"}),
+            
             
             html.Div([
                 html.Label("📊 Data Smoothing:", style={
@@ -517,7 +505,26 @@ layout = html.Div([
                     value="raw",
                     clearable=False
                 )
-            ], style={"flex": "1"})
+            ], style={"flex": "1", "marginRight": "15px"}),
+
+            html.Div([
+                html.Label("📅 Date Range:", style={
+                    "fontWeight": "bold",
+                    "marginBottom": "8px",
+                    "display": "block",
+                    "color": "#2c3e50"
+                }),
+                dcc.DatePickerRange(
+                    id="nox-date-range",
+                    min_date_allowed=datetime(2020, 1, 1),
+                    max_date_allowed=datetime(2025, 12, 31),
+                    start_date=datetime(2024, 12, 1),
+                    end_date=datetime(2024, 12, 31),
+                    display_format="YYYY-MM-DD",
+                    style={"width": "100%"}
+                )
+            ], style={"flex": "1.5", "marginRight": "15px"}),
+
         ], style={"display": "flex"})
     ], style={
         "backgroundColor": "white",
@@ -611,11 +618,12 @@ def update_station_options(selected_pollutant):
      Input("trend-station-selector", "value"),
      Input("nox-province-selector", "value"),
      Input("nox-pollutant-selector", "value"),
-     Input("nox-time-period", "value"),
+     Input("nox-date-range", "start_date"),
+     Input("nox-date-range", "end_date"),
      Input("nox-smoothing", "value"),
      Input("session", "data")]
 )
-def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, time_period, smoothing, session_data):
+def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, start_date, end_date, smoothing, session_data):
     """Update the chart and summary based on selected analysis mode and parameters"""
     if not session_data or not session_data.get("logged_in"):
         fig = go.Figure()
@@ -658,15 +666,25 @@ def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, 
             # Create chart and summary
             fig = create_trend_chart(df_sensor, pollutant, station)
             summary = create_summary_cards(df_sensor, pollutant)
-            
+    
         else:
-            # NOx specialized analysis
+            # SPECIALIZED ANALYSIS 
             # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
-            df_nox = fetch_nox_data(nox_pollutant, province, time_period)
+            df_nox = fetch_nox_data(nox_pollutant, province, datainizio=start_date, datafine=end_date)
+
+            # Apply smoothing (moving average) here
+            if smoothing == "smoothed_7":
+                df_nox["smoothed"] = df_nox["valore"].rolling(window=7, min_periods=1).mean()
+            elif smoothing == "smoothed_14":
+                df_nox["smoothed"] = df_nox["valore"].rolling(window=14, min_periods=2).mean()
+            else:
+                df_nox["smoothed"] = df_nox["valore"]
+
             fig = create_nox_chart(df_nox, nox_pollutant, province, smoothing)
             summary = create_summary_cards(df_nox, nox_pollutant)
-        
+
         return fig, summary, no_update
+
 
 
 
