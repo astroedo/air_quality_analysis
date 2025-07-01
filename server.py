@@ -36,7 +36,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# Assumo che db_connection() sia definita correttamente altrove
+
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -55,16 +55,21 @@ def login():
     cursor.close()
 
     if not user:
-        # Username/email non trovato
+        # Username/email not found
         return jsonify({"message": "Invalid username"}), 401
 
-    stored_password_hash = user[2]
-    if not check_password_hash(stored_password_hash, password):
-        # Password errata
-        return jsonify({"message": "Invalid password"}), 403
+    stored_password = user[2]
 
-    # Login successo
-    # TODO: aggiungere gestione session/token
+
+    # Password verification in plain text
+    if stored_password != password:
+        return jsonify({"message": "Invalid password"}), 403
+    
+    # Password verification using hash (commented out)
+    # if not check_password_hash(stored_password, password):
+    #     return jsonify({"message": "Invalid password"}), 403
+
+
     return jsonify({"message": "Login successful"}), 200
 
 
@@ -83,18 +88,25 @@ def signin():
     query = "SELECT 1 FROM users WHERE username = %s OR email = %s"
     cursor.execute(query, (username, email))
     if cursor.fetchone():
+        cursor.close()
         return jsonify({"message": "Username or email already exists"}), 409
 
-    hashed_password = generate_password_hash(password)
 
-    try:
-        query = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
-        cursor.execute(query, (username, email, hashed_password))
-        conn.commit()
-        cursor.close()
-        return jsonify({"message": "Signup successful"}), 200
-    except Exception as e:
-        return jsonify({"message": f"Internal server error: {str(e)}"}), 500
+    # Store password in plain text
+    query = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
+    cursor.execute(query, (username, email, password))
+
+    # Password hashing for storage (commented out)
+    # hashed_password = generate_password_hash(password)
+    # query = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
+    # cursor.execute(query, (username, email, hashed_password))
+
+
+    conn.commit()
+    cursor.close()
+
+    return jsonify({"message": "Signup successful"}), 200
+
 
 
     
@@ -238,6 +250,7 @@ def api_get_measurements():
 
 @app.route('/api/measurements_by_province', methods=['GET'])
 def get_measurements_by_province():
+    # Get query parameters from URL
     provincia = request.args.get('provincia', type=str)
     pollutant = request.args.get('pollutant', type=str)
     datainizio = request.args.get('datainizio', type=str)
@@ -246,38 +259,56 @@ def get_measurements_by_province():
     try:
         conn = db_connection()
         params = []
-        
-        base_query = """
-            SELECT m.data, AVG(m.valore) AS valore, s.provincia
+
+        # Build SELECT and GROUP BY clauses dynamically depending on presence of 'provincia'
+        if provincia:
+            # Include province in SELECT and group by it
+            select_clause = "SELECT m.data, AVG(m.valore) AS valore, s.provincia"
+            group_by_clause = "GROUP BY m.data, s.provincia"
+        else:
+            # Exclude province if not specified in input
+            select_clause = "SELECT m.data, AVG(m.valore) AS valore"
+            group_by_clause = "GROUP BY m.data"
+
+        # Base SQL query with JOIN between measurement and station
+        base_query = f"""
+            {select_clause}
             FROM measurement m
             JOIN station s ON m.idsensore = s.idsensore
             WHERE m.stato = 'VA'
         """
 
+        # Add optional filters dynamically
         if provincia:
             base_query += " AND s.provincia = %s"
             params.append(provincia)
-        
+
         if pollutant:
             base_query += " AND s.nometiposensore = %s"
             params.append(pollutant)
-        
+
         if datainizio:
             base_query += " AND m.data >= %s"
             params.append(datainizio)
-        
+
         if datafine:
             base_query += " AND m.data <= %s"
             params.append(datafine)
 
-        base_query += " GROUP BY m.data, s.provincia ORDER BY m.data"
+        # Finalize the query with GROUP BY and ORDER BY
+        base_query += f" {group_by_clause} ORDER BY m.data"
 
+        # Execute query and convert to JSON
         df = pd.read_sql_query(base_query, conn, params=params)
         conn.close()
 
         return jsonify(df.to_dict(orient='records'))
+
     except Exception as e:
+        # Return error message in case of failure
         return jsonify({'error': str(e)}), 500
+
+
 
     
 

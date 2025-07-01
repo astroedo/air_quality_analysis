@@ -19,36 +19,6 @@ dash.register_page(__name__, path="/", name="Home")
 
 
 
-# Fetch measurement data for histogram
-def fetch_measurement_data(pollutant_group=None, province=None, start_date=None, end_date=None):
-    api_url="http://localhost:5001/api/measurements2"
-    params = {}
-    if pollutant_group:
-        params["pollutant_group"] = pollutant_group
-    if province:
-        params["province"] = province
-    if start_date:
-        params["start_date"] = start_date
-    if end_date:
-        params["end_date"] = end_date
-
-    try:
-        response = requests.get(api_url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        if isinstance(data, dict) and data.get("error"):
-            print(f"API error: {data['error']}")
-            return pd.DataFrame()
-
-        df = pd.DataFrame(data)
-        logger.info("Measurement data fetched successfully")
-        return df
-    except requests.RequestException as e:
-        print(f"Request failed: {e}")
-        return pd.DataFrame()
-
-
-
 # Get available provinces
 def get_provinces():
     try:
@@ -71,6 +41,23 @@ def get_provinces():
         return []
     
 
+# Funzione helper per filtrare i sensori in base al gruppo inquinante
+def filter_by_pollutant_group(df, pollutant_group):
+    df["nometiposensore"] = df["nometiposensore"].str.strip().str.title()
+
+    if pollutant_group == "PM":
+        return df[df["nometiposensore"].isin([
+            "Pm10", "Pm10 (Sm2005)", "Particolato Totale Sospeso", "Particelle Sospese Pm2.5"
+        ])]
+    elif pollutant_group == "NOx":
+        return df[df["nometiposensore"].isin([
+            "Monossido Di Azoto", "Biossido Di Azoto", "Ossidi Di Azoto"
+        ])]
+    elif pollutant_group == "Ozone":
+        return df[df["nometiposensore"] == "Ozono"]
+    elif pollutant_group and pollutant_group != "All":
+        return df[df["nometiposensore"] == pollutant_group.title()]
+    return df
 
 def create_filtered_map(pollutant_group=None, province=None):
     """Create map with filtered stations"""
@@ -239,16 +226,6 @@ layout = html.Div([
         
         # Filters Section
         html.Div([
-            html.Div([
-                html.Label("📅 Date Range:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
-                dcc.DatePickerRange(
-                    id="date-range-picker",
-                    start_date=date(2024, 1, 1),
-                    end_date=date(2024, 12, 31),
-                    display_format="YYYY-MM-DD",
-                    style={"width": "100%"}
-                )
-            ], style={"flex": "1", "marginRight": "20px"}),
             
             html.Div([
                 html.Label("🏭 Pollutant Group:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
@@ -426,23 +403,6 @@ layout = html.Div([
     
 ])
 
-# Funzione helper per filtrare i sensori in base al gruppo inquinante
-def filter_by_pollutant_group(df, pollutant_group):
-    df["nometiposensore"] = df["nometiposensore"].str.strip().str.title()
-
-    if pollutant_group == "PM":
-        return df[df["nometiposensore"].isin([
-            "Pm10", "Pm10 (Sm2005)", "Particolato Totale Sospeso", "Particelle Sospese Pm2.5"
-        ])]
-    elif pollutant_group == "NOx":
-        return df[df["nometiposensore"].isin([
-            "Monossido Di Azoto", "Biossido Di Azoto", "Ossidi Di Azoto"
-        ])]
-    elif pollutant_group == "Ozone":
-        return df[df["nometiposensore"] == "Ozono"]
-    elif pollutant_group and pollutant_group != "All":
-        return df[df["nometiposensore"] == pollutant_group.title()]
-    return df
 
 
 @callback(
@@ -450,11 +410,9 @@ def filter_by_pollutant_group(df, pollutant_group):
      Output("station-info", "children"),
      Output("sensor-histogram", "figure")],
     [Input("pollutant-group-dropdown", "value"),
-     Input("province-dropdown", "value"),
-     Input("date-range-picker", "start_date"),
-     Input("date-range-picker", "end_date")]
+     Input("province-dropdown", "value")]
 )
-def update_dashboard(pollutant_group, province, start_date, end_date):
+def update_dashboard(pollutant_group, province):
     # Mappa aggiornata
     sensor_map = create_filtered_map(pollutant_group, province)
 

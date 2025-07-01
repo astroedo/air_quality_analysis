@@ -592,11 +592,13 @@ def update_station_options(selected_pollutant):
     """Update available stations based on selected pollutant"""
     if not selected_pollutant:
         return []
+
+    # Fetch data already filtered by pollutant
+    df_filtered = fetch_pollutant(pollutant=selected_pollutant)
     
-    # Filter stations that have the selected pollutant
-    df_filtered = df_all[df_all["nometiposensore"] == selected_pollutant]
+    # Extract unique station names
     available_stations = sorted(df_filtered["nomestazione"].dropna().unique())
-    
+
     return [{"label": station, "value": station} for station in available_stations]
 
 # Main callback to update chart and summary
