@@ -21,7 +21,7 @@ dash.register_page(__name__, path="/", name="Home")
 
 # Fetch measurement data for histogram
 def fetch_measurement_data(pollutant_group=None, province=None, start_date=None, end_date=None):
-    api_url="http://localhost:5000/api/measurements2"
+    api_url="http://localhost:5001/api/measurements2"
     params = {}
     if pollutant_group:
         params["pollutant_group"] = pollutant_group
@@ -52,7 +52,7 @@ def fetch_measurement_data(pollutant_group=None, province=None, start_date=None,
 # Get available provinces
 def get_provinces():
     try:
-        response = requests.get("http://localhost:5000/api/provinces")
+        response = requests.get("http://localhost:5001/api/provinces")
         response.raise_for_status()  # check for HTTP errors
         data = response.json()
         
@@ -86,8 +86,6 @@ def create_filtered_map(pollutant_group=None, province=None):
             )
         
         logger.info("Filtering stations for pollutant group: %s, province: %s", pollutant_group, province)
-
-        # print(f"Filtering stations for pollutant group: {pollutant_group}, province: {province}") # debug
 
         # Applica filtri usando la funzione helper
         filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)

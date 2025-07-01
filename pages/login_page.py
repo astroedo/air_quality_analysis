@@ -122,7 +122,7 @@ def handle_login_and_show_signup(login_clicks, back_clicks, username, password):
         if not username or not password:
             return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", "Insert username e password"]
         try:
-            res = requests.post("http://localhost:5000/api/login", json={
+            res = requests.post("http://localhost:5001/api/login", json={
                 "username": username,
                 "password": password
             })
@@ -164,7 +164,7 @@ def handle_signin(n_clicks, username, password, email, confirm_password):
         if password != confirm_password:
             return "The passwords are different."
         try:
-            res = requests.post("http://localhost:5000/api/signin", json={
+            res = requests.post("http://localhost:5001/api/signin", json={
                 "username": username,
                 "password": password,
                 "email": email

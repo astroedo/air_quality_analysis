@@ -45,7 +45,7 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
     """
 
     try:
-        url = "http://localhost:5000/api/measurements"
+        url = "http://localhost:5001/api/measurements"
         params = {}
 
         if idsensore:
@@ -89,7 +89,7 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
 # Get provinces for NOx analysis
 def get_provinces():
     try:
-        response = requests.get("http://localhost:5000/api/provinces")
+        response = requests.get("http://localhost:5001/api/provinces")
         response.raise_for_status()  # check for HTTP errors
         data = response.json()
         
@@ -129,7 +129,7 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
         params["datafine"] = datafine
 
     try:
-        url = "http://localhost:5000/api/measurements_by_province"
+        url = "http://localhost:5001/api/measurements_by_province"
 
         response = requests.get(url, params=params)
         response.raise_for_status()  
