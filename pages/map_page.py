@@ -29,7 +29,7 @@ layout = html.Div([
         html.Div([  # Container mappa
             dl.Map(
                 id="leaflet-map",
-                center=[45.5, 9.2],
+                center=[45.6997, 9.9276],
                 zoom=7,
                 children=[
                     dl.TileLayer(id="base-layer"),
