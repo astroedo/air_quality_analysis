@@ -530,7 +530,7 @@ def update_dashboard(pollutant_group, province):
                 station_info = html.Div([
                     html.Span(f"{num_stations} stations with {num_sensors} sensors in {province}", style={"fontWeight": "bold"}),
                     html.Br(),
-                    html.Span("Map automatically centered on selected province", style={"fontSize": "12px", "color": "#666", "fontStyle": "italic"})
+                    # html.Span("Map automatically centered on selected province", style={"fontSize": "12px", "color": "#666", "fontStyle": "italic"})
                 ])
             else:
                 station_info = html.Div([
