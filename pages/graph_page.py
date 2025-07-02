@@ -3,7 +3,6 @@ from dash import html, dcc, Output, Input, callback, no_update
 import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
-import psycopg2
 from datetime import datetime, timedelta
 from components.fetch_pollutant import fetch_pollutant
 import numpy as np
@@ -86,7 +85,7 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
         return pd.DataFrame()
 
 
-# Get provinces for NOx analysis
+# Get provinces for Specialized analysis
 def get_provinces():
     try:
         response = requests.get("http://localhost:5001/api/provinces")
@@ -108,9 +107,9 @@ def get_provinces():
         return []
 
 
-# Fetch NOx data from the API       
-def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None, datafine=None):
-    """Fetch NOx data calling the API measurements_by_province"""
+# Fetch data from the API       
+def fetch_data(pollutant, province=None, time_period="full", datainizio=None, datafine=None):
+    """Fetch data calling the API measurements_by_province"""
 
     if pollutant == "NO":
         pollutant = "Monossido di Azoto"
@@ -167,28 +166,17 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
         return pd.DataFrame()
 
 
-def fetch_nox_data_multiple(pollutants, province, start_date=None, end_date=None):
+def fetch_data_multiple(pollutants, province, start_date=None, end_date=None):
     df_list = []
     for pol in pollutants:
-        df = fetch_nox_data(pol, province, datainizio=start_date, datafine=end_date)
+        df = fetch_data(pol, province, datainizio=start_date, datafine=end_date)
         df["pollutant"] = pol
         df_list.append(df)
     return pd.concat(df_list, ignore_index=True) if df_list else pd.DataFrame()
 
 
 
-# Pollutant categories 
-# NOx categories
-def get_nox_categories():
-    return ["NO", "NO2", "Ossidi di Azoto"]
 
-# Time period options
-def get_time_period_options():
-    return [
-        {"label": "First Half Year (Jan-Jun)", "value": "first"},
-        {"label": "Second Half Year (Jul-Dec)", "value": "second"},
-        {"label": "Full Year", "value": "full"}
-    ]
 
 # Data smoothing options
 def get_smoothing_options():
@@ -782,7 +770,7 @@ def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, 
             if province == "All":
                 province = None
 
-            df_nox = fetch_nox_data_multiple(nox_pollutant, province, start_date=start_date, end_date=end_date)
+            df_nox = fetch_data_multiple(nox_pollutant, province, start_date=start_date, end_date=end_date)
             # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
             if df_nox.empty or "valore" not in df_nox.columns:
                 fig = go.Figure()
@@ -812,19 +800,3 @@ def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, 
 
 
         return fig, summary, no_update
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
