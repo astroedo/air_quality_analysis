@@ -3,33 +3,56 @@ import requests
 import pandas as pd
 from components.logger import logger
 from dash import dcc
-from dash import html, Output, Input, no_update
+from dash import html, Output, Input, State, no_update
 from components.dropdown_component import create_dropdown
 from components.fetch_pollutant import fetch_pollutant
 import plotly.express as px
 from datetime import datetime
 import geopandas as gpd
 import dash_leaflet as dl
-import json
+from uuid import uuid4
+import os 
+import zipfile
+import io
 
-province = gpd.read_file('maps/Lombardy_admin2.shp')
-province = province.to_crs(epsg=4326)  # Assicurati che sia in WGS84 (lat/lon)
+province = gpd.read_file('maps/Lombardy_admin2.shp') #shapefile of Lombardy adimn 2 (provinces)
+province = province.to_crs(epsg=4326)  #apply the rigth CRS
 
 dash.register_page(__name__, path="/map", name="Map")
 
+# funcion to create the dataframe with pollutants for the dropdown
 df_all = fetch_pollutant()
 pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
 
-# Layout aggiornato per includere la legenda
+# layout of the map page
 layout = html.Div([
+    # Store component to manage session data login state
+    
     html.Div(id="redirect-map"),
-    html.H2("Air Quality Map", style={"textAlign": "center"}),
 
-    html.Div([  # MAPPA + DROPDOWN + LEGENDA
-        html.Div([  # Container mappa
+    # Page titles
+    html.H2("Air Quality Map", style={"textAlign": "center"}),
+    html.H3("Average Pollutant Levels by Province", style={"textAlign": "center", "marginBottom": "20px"}),
+
+    # Output area for messages
+    html.Div(
+        id='graph-output',
+        style={
+            'textAlign': 'center',
+            'marginTop': '10px',
+            'marginBottom': '50px',
+            'color': 'red',
+            'fontWeight': 'bold'
+        }
+    ),
+
+    html.Div([
+        # Map container
+        html.Div([
+            # Leaflet map
             dl.Map(
                 id="leaflet-map",
-                center=[45.6997, 9.9276],
+                center=[45.5, 9.2],
                 zoom=7,
                 children=[
                     dl.TileLayer(id="base-layer"),
@@ -37,22 +60,70 @@ layout = html.Div([
                 ],
                 style={"width": "100%", "height": "600px"}
             ),
+
+            # Download shapefile button
+            html.Button(
+                "Download Shapefile",
+                id="btn-download-shp",
+                style={
+                    "position": "absolute",
+                    "bottom": "20px",
+                    "right": "20px",
+                    "zIndex": 1000,
+                    "color": "white",
+                    "height": "40px",
+                    "borderRadius": "8px",
+                    "padding": "10px 20px",
+                    "backgroundColor": "#007BFF",
+                    "border": "none",
+                    "cursor": "pointer",
+                    "fontWeight": "bold",
+                    "boxShadow": "0 2px 8px rgba(0,0,0,0.3)"
+                }
+            ),
+            dcc.Download(id="download-shp"),
+
+            # Pollutant dropdown selector
             create_dropdown(pollutants, show_all=False),
+
+            # Date range picker
+            dcc.DatePickerRange(
+                id="date-picker-range",
+                min_date_allowed=datetime(2024, 1, 1),
+                max_date_allowed=datetime(2025, 1, 1),
+                start_date=datetime(2024, 12, 1),
+                end_date=datetime(2024, 12, 31),
+                display_format="DD/MM/YYYY",
+                style={
+                    "position": "absolute",
+                    "top": "10px",
+                    "left": "100px",
+                    "zIndex": 800,
+                    "backgroundColor": "white",
+                    "display": "flex",
+                    "borderRadius": "8px",
+                    "boxShadow": "0 2px 8px rgba(0,0,0,0.3)",
+                    "marginTop": "10px",
+                    "cursor": "pointer",
+                }
+            )
         ], style={"position": "relative"}),
-        
-        # Legenda posizionata accanto alla mappa
+
+        # Map legend container
         html.Div(
             id="map-legend",
             style={
-                "position": "relative",
+                "position": "absolute",
+                "bottom": "20px",
+                "left": "20px",
                 "width": "150px",
                 "backgroundColor": "white",
-                "border": "2px solid grey",
-                "zIndex": "1000",
+                "zIndex": 1000,
                 "fontSize": "14px",
                 "padding": "10px",
-                "borderRadius": "5px",
-                "display": "none"  # nascosta inizialmente
+                "boxShadow": "0 2px 8px rgba(0,0,0,0.3)",
+                "borderRadius": "8px",
+                "display": "none"
             }
         )
     ], style={
@@ -63,31 +134,12 @@ layout = html.Div([
         "marginBottom": "30px"
     }),
 
-    html.Div([  # DATE + ISTOGRAMMA
-        dcc.DatePickerRange(
-            id="date-picker-range",
-            min_date_allowed=datetime(2020, 1, 1),
-            max_date_allowed=datetime(2025, 12, 31),
-            start_date=datetime(2024, 12, 1),
-            end_date=datetime(2024, 12, 31),
-            display_format="YYYY-MM-DD",
-            style={
-                "border": "1px solid #ccc",
-                "borderRadius": "8px",
-                "padding": "10px",
-                "marginBottom": "20px",
-                "backgroundColor": "#ffffff",
-                "width": "100%",
-                "display": "flex",
-                "justifyContent": "center",
-                "marginTop": "20px"
-            }
-        ),
+    # Histogram chart
+    html.Div([
         dcc.Graph(
             id="histogram",
             style={"height": "400px"}
-        ),
-        html.Div(id='graph-output', style={'textAlign': 'center', 'marginTop': '10px', 'marginBottom': '50px'})
+        )
     ])
 ], style={
     "paddingLeft": "20px",
@@ -96,6 +148,10 @@ layout = html.Div([
     "margin": "auto"
 })
 
+
+
+
+# Function to fetch average pollutant for provinces and time range
 def fetch_avg_province_pollutant(pollutants, start_date=None, end_date=None):
     """
     Function to fetch pollutant data from the API, filters the data accordingly the time range.
@@ -111,75 +167,130 @@ def fetch_avg_province_pollutant(pollutants, start_date=None, end_date=None):
                            params = {'pollutant': pollutants,'start_date': start_date, 'end_date': end_date})
         df = pd.DataFrame(res.json())
         return df
-    except Exception as e:
+    except Exception as e: # if there is an error in the API request, log the error and return an empty DataFrame
         logger.error(f"Error fetching data: {e}")
         return pd.DataFrame()
 
-def create_province_layer(df_pollutant):
-    nome_to_sigla = {
+# Function to create the province layer with colors based on pollutant values and create the legend
+def create_province_layer_legend(df_pollutant):
+
+    # Map of province names to their sigla (abbreviations in database, Extent in the shapefile)
+    nome_to_sigla = { 
         "Milano": "MI", "Bergamo": "BG", "Brescia": "BS",
         "Como": "CO", "Cremona": "CR", "Lecco": "LC",
         "Lodi": "LO", "Mantua": "MN", "Monza and Brianza": "MB",
         "Pavia": "PV", "Sondrio": "SO", "Varese": "VA"
     }
-
-    province["sigla"] = province["NAME_2"].map(nome_to_sigla)
+    province["sigla"] = province["NAME_2"].map(nome_to_sigla) 
+    # makes sure the province names match the ones in the database and join with the pollutant data
     gdf = province.merge(df_pollutant, left_on="sigla", right_on="provincia", how="left")
-
-    # Calcola min e max per la normalizzazione
+    # calculating the max and min values for the color scale 
     min_val = gdf["mean"].min()
     max_val = gdf["mean"].max()
 
-    def get_color(val):
-        if pd.isna(val):
-            return "#cccccc"  # grigio per assenza dati
-        if max_val - min_val < 1e-6:
-            norm = 0.5
-        else:
-            norm = (val - min_val) / (max_val - min_val)
-        
-        # Scala di colori da verde (basso) a rosso (alto)
-        if norm < 0.5:
-            # Da verde a giallo
-            r = int(255 * norm * 2)
-            g = 255
-            b = 0
-        else:
-            # Da giallo a rosso
-            r = 255
-            g = int(255 * (1 - norm) * 2)
-            b = 0
-        
-        return f"#{r:02x}{g:02x}{b:02x}"
+    if pd.isna(min_val) or pd.isna(max_val):
+        return []
+    else:
+    # Function to get the color based on the value
+        def get_color(val):
+            if pd.isna(val):
+                return "#cccccc"  # grey for missing data
+            if max_val - min_val < 1e-6: # if all values are the same, set a neutral color
+                norm = 0.5
+            else:
+                norm = (val - min_val) / (max_val - min_val) # normalize the value between 0 and 1
+            # color scale from green (low pollution) to yellow (medium pollution) to red (high pollution)
+            if norm < 0.5:
+                # from green to yellow
+                r = int(255 * norm * 2)
+                g = 255
+                b = 0
+            else:
+                # from yellow to red
+                r = 255
+                g = int(255 * (1 - norm) * 2)
+                b = 0
+            # return the color in hex format
+            return f"#{r:02x}{g:02x}{b:02x}"
 
-    # Applica i colori
-    gdf["color"] = gdf["mean"].apply(get_color)
+        # Create legend values from min to max, divided into 4 intervals
+        legend_values = [min_val + i * (max_val - min_val) / 4 for i in range(5)]
+        # Add the title of the legend
+        legend_elements = [html.P("Pollution Level", style={"margin": "0 0 10px 0", "fontWeight": "bold"})] 
+        # Create ranges for the legend
+        legend_ranges = [(legend_values[i], legend_values[i + 1]) for i in range(len(legend_values) - 1)]
+        # Create colors for the legend based on the ranges
+        legend_colors = [get_color((r[0] + r[1]) / 2) for r in legend_ranges]
+        
+        # Add legend elements with colors and ranges
+        for (min_val, max_val), color in zip(legend_ranges, legend_colors):
+            legend_elements.append(
+                html.Div([ # legend internal layout
+                    html.Div(style={
+                        "width": "20px",
+                        "height": "15px",
+                        "backgroundColor": color,
+                        "border": "1px solid black",
+                        "marginRight": "8px",
+                        "display": "inline-block"
+                    }),
+                    html.Span(f"{min_val:.1f} - {max_val:.1f}", style={"verticalAlign": "top"})
+                ], style={"display": "flex", "alignItems": "center", "margin": "3px 0"})
+            )
+        # Add "No data"
+        legend_elements.append(
+            html.Div([
+                html.Div(style={
+                    "width": "20px",
+                    "height": "15px",
+                    "backgroundColor": "#cccccc",
+                    "border": "1px solid black",
+                    "marginRight": "8px",
+                    "display": "inline-block"
+                }),
+                html.Span("No data", style={"verticalAlign": "top"})
+            ], style={"display": "flex", "alignItems": "center", "margin": "3px 0"})
+        ) 
+
+    # Function to get the color for each province based on the mean value
+    def get_color_discrete(val, legend_ranges, legend_colors):
+        if pd.isna(val):
+            return "#cccccc"  # no data
+        for (min_r, max_r), color in zip(legend_ranges, legend_colors): 
+            if min_r <= val <= max_r:
+                return color
+        # Se valore fuori range massimo, assegna colore ultimo intervallo
+        return legend_colors[-1]
+
+    # Apply the color function to each province based on the mean value
+    gdf["color"] = [get_color_discrete(val, legend_ranges, legend_colors) for val in gdf["mean"]]
+    # Create a tooltip with the province name and mean value, visible on hover
     gdf["tooltip"] = gdf["NAME_2"] + ": " + gdf["mean"].round(2).astype(str)
 
-    # SOLUZIONE CORRETTA: Crea poligoni individuali con colori personalizzati
+    # Create a list of children for the LayerGroup, list of polygons for each province
     children = []
-    
-    # Aggiungi TUTTE le province (con e senza dati)
+    # Add polygons for each province
     for _, row in gdf.iterrows():
-        # Estrai la geometria per questa provincia
+        # get the geometry of the province
         geom = row["geometry"]
         if geom.geom_type == 'Polygon':
-            coords = [[[lat, lon] for lon, lat in geom.exterior.coords]]
+            coords = [[[lat, lon] for lon, lat in geom.exterior.coords]] 
         elif geom.geom_type == 'MultiPolygon':
             coords = []
             for poly in geom.geoms:
                 coords.append([[lat, lon] for lon, lat in poly.exterior.coords])
         
-        # Determina colore e tooltip
+        # Set the fill color and tooltip text based on the mean value
         if pd.isna(row["mean"]):
-            fill_color = "#cccccc"  # grigio per province senza dati
+            fill_color = "#cccccc"  # grey for missing data
             tooltip_text = f"{row['NAME_2']}: No data"
         else:
             fill_color = row["color"]
             tooltip_text = f"{row['NAME_2']}: {row['mean']:.2f}"
         
-        # Crea un poligono con il colore specifico
+        # Create the polygon with the coordinates, fill color and tooltip
         polygon = dl.Polygon(
+            id=f"poly-{uuid4()}", # unique id for each polygon
             positions=coords,
             fillColor=fill_color,
             fillOpacity=0.7,
@@ -193,127 +304,59 @@ def create_province_layer(df_pollutant):
                 )
             ]
         )
+        # add the polygon to the list of children
         children.append(polygon)
-    
-    # Restituisci i poligoni wrappati in un LayerGroup
-    return dl.LayerGroup(children=children)
+    # return a LayerGroup with the list of polygons and the legend 
+    return dl.FeatureGroup(children=children), legend_elements, gdf
 
-def create_legend(min_val, max_val, get_color_func):
-    """Crea gli elementi HTML per la legenda"""
-    if pd.isna(min_val) or pd.isna(max_val):
-        return []
-    
-    # Crea 5 valori per la legenda
-    legend_values = [min_val + i * (max_val - min_val) / 4 for i in range(5)]
-    legend_elements = [html.P("Pollution Level", style={"margin": "0 0 10px 0", "fontWeight": "bold"})]
-    
-    for val in legend_values:
-        color = get_color_func(val)
-        legend_elements.append(
-            html.Div([
-                html.Div(style={
-                    "width": "20px",
-                    "height": "15px",
-                    "backgroundColor": color,
-                    "border": "1px solid black",
-                    "marginRight": "8px",
-                    "display": "inline-block"
-                }),
-                html.Span(f"{val:.1f}", style={"verticalAlign": "top"})
-            ], style={"display": "flex", "alignItems": "center", "margin": "3px 0"})
-        )
-    
-    # Aggiungi "No data"
-    legend_elements.append(
-        html.Div([
-            html.Div(style={
-                "width": "20px",
-                "height": "15px",
-                "backgroundColor": "#cccccc",
-                "border": "1px solid black",
-                "marginRight": "8px",
-                "display": "inline-block"
-            }),
-            html.Span("No data", style={"verticalAlign": "top"})
-        ], style={"display": "flex", "alignItems": "center", "margin": "3px 0"})
-    )
-    
-    return legend_elements
 
-# Callback aggiornato per includere la legenda
+# Callback to update the map and histogram based on the selected pollutant and date range
 @dash.callback(
     [Output("histogram", "figure"),
-     Output("histogram", "style"),
-     Output("graph-output", "children"),
-     Output("layer-province", "children"),
-     Output("map-legend", "children"),
-     Output("map-legend", "style"),
-     Output("redirect-map", "children")],
-    [Input("pollutant-selector", "value"),
-     Input("date-picker-range", "start_date"),
+     Output("histogram", "style"), # style to show/hide the histogram
+     Output("graph-output", "children"), # message to show when no pollutant is selected
+     Output("layer-province", "children"), # layer of the map with the provinces
+     Output("map-legend", "children"), 
+     Output("map-legend", "style"), # style of the legend show/hide
+     Output("redirect-map", "children")], # redirect to login if not logged in
+    [Input("pollutant-selector", "value"), # pollutant selected from the dropdown
+     Input("date-picker-range", "start_date"), # start date from the date picker
      Input("date-picker-range", "end_date"),
-     Input("session", "data")]
+     Input("session", "data")] # session data to check if the user is logged in
 )
 def update_all(selected_pollutant, start_date, end_date, session_data):
-    """
-    Aggiorna mappa, istogramma e legenda basandosi sul pollutant selezionato
-    """
+    
+    # Check if the user is logged in, if not redirect to login page
     if not session_data or not session_data.get("logged_in"):
         return {}, {'display': 'none'}, "Please login.", [], [], {"display": "none"}, dcc.Location(href="/login", id="redirect-now")
     else:
         try:
-            if selected_pollutant == "Tutti" or selected_pollutant is None:
+            if selected_pollutant is None: # if no pollutant is selected, print a message and hide the histogram
                 legend_style = {"display": "none"}
-                return {}, {'display': 'none'}, "Please select a pollutant to view the histogram.", [], [], legend_style, no_update
+                return {}, {'display': 'none'}, "Please select a pollutant to view the map and the histogram below.", [], [], legend_style, no_update
             
+            # Fetch the average pollutant data for the selected pollutant and date range
             df = fetch_avg_province_pollutant(selected_pollutant, start_date, end_date)
-            if df.empty:
+            if df.empty: # if the dataframe is empty, print a message and hide the histogram
                 legend_style = {"display": "none"}
                 return {}, {'display': 'none'}, "No data available for the selected pollutant and date range.", [], [], legend_style, no_update
             else:
-                # Calcola min e max per la legenda
-                min_val = df["mean"].min()
-                max_val = df["mean"].max()
-                
-                # Crea il layer della mappa
-                layer = create_province_layer(df)
-                
-                # Crea la legenda
-                def get_color(val):
-                    if pd.isna(val):
-                        return "#cccccc"
-                    if max_val - min_val < 1e-6:
-                        norm = 0.5
-                    else:
-                        norm = (val - min_val) / (max_val - min_val)
-                    
-                    if norm < 0.5:
-                        r = int(255 * norm * 2)
-                        g = 255
-                        b = 0
-                    else:
-                        r = 255
-                        g = int(255 * (1 - norm) * 2)
-                        b = 0
-                    
-                    return f"#{r:02x}{g:02x}{b:02x}"
-                
-                legend_elements = create_legend(min_val, max_val, get_color)
-                legend_style = {
-                    "position": "absolute",
-                    "bottom": "20px",
-                    "left": "20px",
-                    "width": "150px",
-                    "backgroundColor": "white",
-                    "border": "2px solid grey",
-                    "zIndex": "1000",
-                    "fontSize": "14px",
-                    "padding": "10px",
-                    "borderRadius": "5px",
-                    "display": "block"
-                }
+                # create the province layer and legend
+                layer, legend, _ = create_province_layer_legend(df)
+                legend_style ={
+                    "position": "absolute",         
+                "bottom": "20px",               
+                "left": "20px",                 
+                "width": "150px",
+                "backgroundColor": "white",
+                "zIndex": "1000",
+                "fontSize": "14px",
+                "padding": "10px",
+                "boxShadow": "0 2px 8px rgba(0,0,0,0.3)",
+                "borderRadius": "8px",
+                "display": "block"  }       
 
-                # Crea l'istogramma
+                # Create the histogram figure using Plotly Express
                 unit = df["unitamisura"].iloc[0] if "unitamisura" in df.columns else ""
                 fig = px.bar(
                     df,
@@ -323,15 +366,63 @@ def update_all(selected_pollutant, start_date, end_date, session_data):
                     labels={"provincia": "Province", "mean": "Average Value"},
                     template="plotly_white",  
                 )
-                fig.update_layout(
+                fig.update_layout( # update the layout of the figure
                     xaxis_title="Province",
                     yaxis_title=f"Average {selected_pollutant} ({unit})",
-                    title_x=0.5
+                    title_x=0.5,
+                    title={
+                    'text': fig.layout.title.text,  # mantiene il testo attuale del titolo
+                    'font': {'size': 24, 'family': 'Arial', 'color': 'black', 'weight': 'bold'}}
                 )
-                
-                return fig, {'display': 'block'}, "", [layer], legend_elements, legend_style, no_update
+                print("Updating map layer with", len(layer.children), "polygons")
+                if not start_date or not end_date:
+                    return fig, {'display': 'block'}, "Showing the last 7 days average. Else insert a time range", layer.children, legend, legend_style, no_update
+                return fig, {'display': 'block'}, "", layer.children, legend, legend_style, no_update
         
-        except Exception as e:
-            print("ERRORE CALLBACK:", e)
+        except Exception as e: # if there is an error in the callback, print the error and hide the histogram
             legend_style = {"display": "none"}
             return {}, {"display": "none"}, f"Errore: {str(e)}", [], [], legend_style, no_update
+        
+# Callback to generate and download the shapefile of the map with the selected pollutant
+@dash.callback(
+    Output("download-shp", "data"), # output to download the shapefile
+    Input("btn-download-shp", "n_clicks"), # button to download the shapefile
+    [State("pollutant-selector", "value"),
+     State("date-picker-range", "start_date"),
+     State("date-picker-range", "end_date")],
+    prevent_initial_call=True, # prevent the callback from being called on page load
+)
+def genera_shapefile(n_clicks, selected_pollutant, start_date, end_date):
+
+    if not selected_pollutant: # if no pollutant is selected, do not generate the shapefile
+        return dash.no_update
+    try:
+        df = fetch_avg_province_pollutant(selected_pollutant, start_date, end_date)
+        if df.empty: # if the dataframe is empty, do not generate the shapefile
+            return dash.no_update
+        # create the province layer and legend
+        _, _, gdf = create_province_layer_legend(df)
+
+        temp_dir = "temp_shp" # temporary directory to store the shapefile
+        os.makedirs(temp_dir, exist_ok=True) # create the directory if it does not exist
+
+        gdf.to_file(os.path.join(temp_dir, "GeoAir_map.shp")) # save the GeoDataFrame to a shapefile
+
+        zip_buffer = io.BytesIO() # create a buffer to store the zip file
+        # Create a zip file in memory
+        with zipfile.ZipFile(zip_buffer, "w") as zipf:
+            for fname in os.listdir(temp_dir):
+                file_path = os.path.join(temp_dir, fname)
+                zipf.write(file_path, arcname=fname)
+        # Clean up the temporary directory
+        for fname in os.listdir(temp_dir):
+            os.remove(os.path.join(temp_dir, fname))
+        os.rmdir(temp_dir)
+
+        zip_buffer.seek(0) # reset the buffer position to the beginning
+        return dcc.send_bytes(zip_buffer.read(), filename="GeoAir_map.zip")
+
+    except Exception as e: # if there is an error in the shapefile generation, print the error and return no update
+        print(f"Error in the shapefile download: {e}")
+        return dash.no_update
+

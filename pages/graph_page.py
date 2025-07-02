@@ -616,7 +616,7 @@ layout = html.Div([
                     max_date_allowed=datetime(2025, 12, 31),
                     start_date=datetime(2024, 12, 1),
                     end_date=datetime(2024, 12, 31),
-                    display_format="YYYY-MM-DD",
+                    display_format="DD/MM/YYYY",
                     style={"width": "100%"}
                 )
             ], style={"flex": "1.5", "marginRight": "15px"}),
