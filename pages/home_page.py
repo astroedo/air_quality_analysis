@@ -399,108 +399,70 @@ layout = html.Div([
     # Team Section
     html.Div([
         html.H2(
-            "Meet Our Team", 
+            "Meet Our Team",
             style={
-                "textAlign": "center", 
+                "textAlign": "center",
                 "color": "white",
-                "marginBottom": "50px",
-                "fontSize": "2.5rem"
+                "marginBottom": "30px",
+                "fontSize": "2rem"
             }
         ),
         html.Div([
-            # Team Member 1
-            html.Div([
-                html.Div([
-                    html.H3("Gianluca Bettone", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("Back-end Developer", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
-                    html.P(
-                        "Specialized in server architecture and API development.",
-                        style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
-                    )
-                ], style={
-                    "backgroundColor": "rgba(255,255,255,0.1)",
-                    "padding": "30px",
-                    "borderRadius": "15px",
-                    "textAlign": "center",
-                    "height": "200px",
-                    "display": "flex",
-                    "flexDirection": "column",
-                    "justifyContent": "center"
-                })
-            ], style={"flex": "1", "margin": "0 15px"}),
-            
-            # Team Member 2
-            html.Div([
-                html.Div([
-                    html.H3("Mobina Faraji", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("Trend Analysis Specialist", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
-                    html.P(
-                        "Specialized in data visualization and temporal analysis.",
-                        style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
-                    )
-                ], style={
-                    "backgroundColor": "rgba(255,255,255,0.1)",
-                    "padding": "30px",
-                    "borderRadius": "15px",
-                    "textAlign": "center",
-                    "height": "200px",
-                    "display": "flex",
-                    "flexDirection": "column",
-                    "justifyContent": "center"
-                })
-            ], style={"flex": "1", "margin": "0 15px"}),
-            
-            # Team Member 3
-            html.Div([
-                html.Div([
-                    html.H3("Alessia Ippolito", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("Map Visualization Expert", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
-                    html.P(
-                        "Specialist in geospatial data and interactive mapping.",
-                        style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
-                    )
-                ], style={
-                    "backgroundColor": "rgba(255,255,255,0.1)",
-                    "padding": "30px",
-                    "borderRadius": "15px",
-                    "textAlign": "center",
-                    "height": "200px",
-                    "display": "flex",
-                    "flexDirection": "column",
-                    "justifyContent": "center"
-                })
-            ], style={"flex": "1", "margin": "0 15px"}),
-            
-            # Team Member 4
-            html.Div([
-                html.Div([
-                    html.H3("Edoardo Pessina", style={"color": "white", "marginBottom": "10px"}),
-                    html.P("Database Developer", style={"color": "rgba(255,255,255,0.8)", "fontSize": "1.1rem", "marginBottom": "15px"}),
-                    html.P(
-                        "Specialized in database design and data management.",
-                        style={"color": "rgba(255,255,255,0.9)", "lineHeight": "1.5"}
-                    )
-                ], style={
-                    "backgroundColor": "rgba(255,255,255,0.1)",
-                    "padding": "30px",
-                    "borderRadius": "15px",
-                    "textAlign": "center",
-                    "height": "200px",
-                    "display": "flex",
-                    "flexDirection": "column",
-                    "justifyContent": "center"
-                })
-            ], style={"flex": "1", "margin": "0 15px"})
+            html.Div("Gianluca Bettoni", style={
+                "backgroundColor": "rgba(255,255,255,0.1)",
+                "color": "white",
+                "padding": "20px 30px",
+                "borderRadius": "15px",
+                "margin": "10px",
+                "flex": "1",
+                "textAlign": "center",
+                "minWidth": "180px"
+            }),
+            html.Div("Mobina Faraji", style={
+                "backgroundColor": "rgba(255,255,255,0.1)",
+                "color": "white",
+                "padding": "20px 30px",
+                "borderRadius": "15px",
+                "margin": "10px",
+                "flex": "1",
+                "textAlign": "center",
+                "minWidth": "180px"
+            }),
+            html.Div("Alessia Ippolito", style={
+                "backgroundColor": "rgba(255,255,255,0.1)",
+                "color": "white",
+                "padding": "20px 30px",
+                "borderRadius": "15px",
+                "margin": "10px",
+                "flex": "1",
+                "textAlign": "center",
+                "minWidth": "180px"
+            }),
+            html.Div("Edoardo Pessina", style={
+                "backgroundColor": "rgba(255,255,255,0.1)",
+                "color": "white",
+                "padding": "20px 30px",
+                "borderRadius": "15px",
+                "margin": "10px",
+                "flex": "1",
+                "textAlign": "center",
+                "minWidth": "180px"
+            })
         ], style={
             "display": "flex",
-            "maxWidth": "1200px",
+            "justifyContent": "center",
+            "flexWrap": "wrap",
+            "maxWidth": "1400px",
             "margin": "0 auto"
         })
     ], style={
         "backgroundColor": "rgb(19, 129, 159)",
-        "padding": "80px 20px",
-        "marginTop": "40px"
+        "padding": "60px 20px",
+        "marginTop": "40px",
+        "textAlign": "center"
     }),
+
+
 ])
 
 
