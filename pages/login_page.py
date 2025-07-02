@@ -1,6 +1,7 @@
 import dash
 from dash import html, dcc, Input, Output, State, callback, no_update
 import requests
+from components.logger import logger
 
 dash.register_page(__name__, path='/login', name='Login')
 
@@ -190,6 +191,8 @@ def handle_login(login_clicks, username, password, session_data):
 
         if res.status_code == 200:
             # Login successful: hide signup elements, show welcome message, update session
+            logger.info(f"User {username} logged in successfully.")
+            # Update session data with login status and username
             return (
                 {'display': 'none'}, {'display': 'none'}, {'display': 'none'},
                 {**button_style, 'display': 'block'},
@@ -200,6 +203,7 @@ def handle_login(login_clicks, username, password, session_data):
             )
         elif res.status_code == 403:
             # Wrong password response: show error message
+            logger.warning(f"Failed login attempt for user {username}: wrong password.")
             return (
                 no_update, no_update, no_update, no_update, no_update,
                 "Wrong password.",
@@ -208,6 +212,7 @@ def handle_login(login_clicks, username, password, session_data):
             )
         elif res.status_code == 401:
             # Username not found: show signup fields, prompt registration
+            logger.warning(f"User {username} not found.")
             return (
                 {'display': 'block'},
                 {**button_style, 'display': 'block'},
@@ -220,6 +225,7 @@ def handle_login(login_clicks, username, password, session_data):
             )
         else:
             # Other error responses: display error status and message
+            logger.error(f"Login failed for user {username}: {res.status_code} - {res.text}")
             return (
                 no_update, no_update, no_update, no_update, no_update,
                 f"Error: {res.status_code} - {res.text}",
@@ -228,6 +234,7 @@ def handle_login(login_clicks, username, password, session_data):
             )
     except requests.exceptions.RequestException as e:
         # Connection or request error: display connection error message
+        logger.error(f"Connection error during login for user {username}: {str(e)}")
         return (
             no_update, no_update, no_update, no_update, no_update,
             f"Connection error: {str(e)}",
@@ -279,18 +286,21 @@ def handle_signin(n_clicks, username, password, email, confirm_password):
         })
 
         if res.status_code in (200, 201):
+            logger.info(f"User {username} registered successfully.")
             # Successful registration: notify user they can login now
             return (
                 "Registration completed! Now you can login.",
                 {'color': '#0ea80e', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
             )
         else:
+            logger.error(f"Registration failed for user {username}: {res.status_code} - {res.text}")
             # Registration error: display error message from server
             return (
                 f"Error in registration: {res.status_code} - {res.text}",
                 {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
             )
     except requests.exceptions.RequestException as e:
+        logger.error(f"Connection error during signup for user {username}: {str(e)}")
         # Connection error during signup: show error message
         return (
             f"Connection error: {str(e)}",
