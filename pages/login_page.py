@@ -49,6 +49,9 @@ form_card_style = {
     'boxSizing': 'border-box'
 }
 
+
+
+### LAYOUT -> LOGIN PAGE ###
 layout = html.Div([
     dcc.Store(id='login-page-store', data={'mode': 'login'}),
     
@@ -74,90 +77,119 @@ layout = html.Div([
     html.Div(id='login-output', style={'textAlign': 'center', 'color': 'red', 'marginTop': '10px'})
 ])
 
-# Toggle login/signup view
+
+
+
+# Toggle between login and signup views
 @callback(
-    [Output('signup-fields', 'style'),
-     Output('signup-button', 'style'),
-     Output('back-to-login', 'style'),
-     Output('login-button', 'style'),
-     Output('login-page-title', 'children'),
-     Output('login-page-store', 'data')],
-    [Input('back-to-login', 'n_clicks'),
-     Input('login-page-store', 'data')],
+    [
+        Output('signup-fields', 'style'),      # Show/hide signup input fields
+        Output('signup-button', 'style'),      # Show/hide signup button
+        Output('back-to-login', 'style'),      # Show/hide "back to login" link
+        Output('login-button', 'style'),       # Show/hide login button
+        Output('login-page-title', 'children'),# Change login page title text
+        Output('login-page-store', 'data')     # Store current mode ('login' or 'signup') in page store
+    ],
+    [
+        Input('back-to-login', 'n_clicks'),    # Triggered when user clicks "back to login"
+        Input('login-page-store', 'data')      # Current stored mode data
+    ],
     prevent_initial_call='initial_duplicate'
 )
 def toggle_login_signup(back_clicks, store_data):
     from dash import ctx
+    # If no trigger or user clicked "back to login"
     if not ctx.triggered or not back_clicks or ctx.triggered[0]['prop_id'] == 'back-to-login.n_clicks':
+        # Switch view to login: hide signup fields/buttons, show login button, update title and mode
         return (
-            {'display': 'none'},
-            {'display': 'none'},
-            {'display': 'none'},
-            {**button_style, 'display': 'block'},
-            "Login",
-            {'mode': 'login'}
+            {'display': 'none'},        # Hide signup fields
+            {'display': 'none'},        # Hide signup button
+            {'display': 'none'},        # Hide back-to-login link
+            {**button_style, 'display': 'block'},  # Show login button
+            "Login",                   # Set page title to "Login"
+            {'mode': 'login'}          # Update store mode to 'login'
         )
+    # If other triggers occur, do nothing (no update)
     return no_update
 
-# Check session state
+
+
+# Check if user session is active and update login form accordingly
 @callback(
-    [Output('login-form-container', 'style'),
-     Output('login-page-title', 'children', allow_duplicate=True),
-     Output('login-output', 'children', allow_duplicate=True),
-     Output('login-output', 'style', allow_duplicate=True)],
-    Input('session', 'data'),
+    [
+        Output('login-form-container', 'style'),       # Show/hide login form container
+        Output('login-page-title', 'children', allow_duplicate=True),  # Update page title
+        Output('login-output', 'children', allow_duplicate=True),     # Show login status message
+        Output('login-output', 'style', allow_duplicate=True)         # Style for login status message
+    ],
+    Input('session', 'data'),  # Triggered when session data changes
     prevent_initial_call='initial_duplicate',
     allow_duplicate=True
 )
 def check_login_status(session_data):
+    # If session exists and user is logged in
     if session_data and session_data.get("logged_in", False):
         username = session_data.get("username", "unknown user")
+        # Hide login form and show welcome message with username
         return (
-            {'display': 'none'},
-            "Welcome to GeoAir!",
-            f"You are logged in as {username}. Please, logout to switch user.",
-            {'color': 'black', 'textAlign': 'center', 'marginTop': '20px', 'fontWeight': 'bold'}
+            {'display': 'none'},      # Hide login form
+            "Welcome to GeoAir!",     # Change page title to welcome message
+            f"You are logged in as {username}. Please, logout to switch user.",  # Status message
+            {'color': 'black', 'textAlign': 'center', 'marginTop': '20px', 'fontWeight': 'bold'}  # Styling message
         )
+    # If not logged in, show login form with default title and no message
     return (
-        form_card_style,
-        "Login",
-        "",
-        no_update
+        form_card_style,             # Show login form with default style
+        "Login",                    # Page title as "Login"
+        "",                         # No status message
+        no_update                   # Keep previous style for status message
     )
 
-# Handle login action
+
+# Handle login action callback
 @callback(
-    [Output('signup-fields', 'style', allow_duplicate=True),
-     Output('signup-button', 'style', allow_duplicate=True),
-     Output('back-to-login', 'style', allow_duplicate=True),
-     Output('login-button', 'style', allow_duplicate=True),
-     Output('login-page-title', 'children', allow_duplicate=True),
-     Output('login-output', 'children', allow_duplicate=True),
-     Output('login-output', 'style', allow_duplicate=True),
-     Output('session', 'data', allow_duplicate=True)],
-    Input('login-button', 'n_clicks'),
-    [State('login-username', 'value'),
-     State('login-password', 'value'),
-     State('session', 'data')],
+    [
+        Output('signup-fields', 'style', allow_duplicate=True),  # Show/hide signup fields
+        Output('signup-button', 'style', allow_duplicate=True),  # Show/hide signup button
+        Output('back-to-login', 'style', allow_duplicate=True),  # Show/hide back to login link
+        Output('login-button', 'style', allow_duplicate=True),   # Show/hide login button
+        Output('login-page-title', 'children', allow_duplicate=True),  # Change page title text
+        Output('login-output', 'children', allow_duplicate=True),      # Display login status message
+        Output('login-output', 'style', allow_duplicate=True),         # Style of login status message
+        Output('session', 'data', allow_duplicate=True)                 # Update session data on successful login
+    ],
+    Input('login-button', 'n_clicks'),  # Triggered when login button is clicked
+    [
+        State('login-username', 'value'),  # Current username input
+        State('login-password', 'value'),  # Current password input
+        State('session', 'data')            # Current session data
+    ],
     prevent_initial_call=True,
     allow_duplicate=True
 )
 def handle_login(login_clicks, username, password, session_data):
     if not login_clicks:
-        return no_update
+        return no_update  # Do nothing if login button not clicked
+
+    # Validate username and password presence
     if not username or not password:
+        # Prompt user to insert credentials if missing
         return (
             no_update, no_update, no_update, no_update, no_update,
             "Insert username and password",
             {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'},
             no_update
         )
+
     try:
+        # Send POST request to login API with username and password
         res = requests.post("http://localhost:5001/api/login", json={
             "username": username,
             "password": password
         })
+
         if res.status_code == 200:
+            # Login successful: hide signup elements, show welcome message, update session
             return (
                 {'display': 'none'}, {'display': 'none'}, {'display': 'none'},
                 {**button_style, 'display': 'block'},
@@ -167,6 +199,7 @@ def handle_login(login_clicks, username, password, session_data):
                 {"logged_in": True, "username": username}
             )
         elif res.status_code == 403:
+            # Wrong password response: show error message
             return (
                 no_update, no_update, no_update, no_update, no_update,
                 "Wrong password.",
@@ -174,6 +207,7 @@ def handle_login(login_clicks, username, password, session_data):
                 no_update
             )
         elif res.status_code == 401:
+            # Username not found: show signup fields, prompt registration
             return (
                 {'display': 'block'},
                 {**button_style, 'display': 'block'},
@@ -185,6 +219,7 @@ def handle_login(login_clicks, username, password, session_data):
                 no_update
             )
         else:
+            # Other error responses: display error status and message
             return (
                 no_update, no_update, no_update, no_update, no_update,
                 f"Error: {res.status_code} - {res.text}",
@@ -192,6 +227,7 @@ def handle_login(login_clicks, username, password, session_data):
                 no_update
             )
     except requests.exceptions.RequestException as e:
+        # Connection or request error: display connection error message
         return (
             no_update, no_update, no_update, no_update, no_update,
             f"Connection error: {str(e)}",
@@ -199,39 +235,64 @@ def handle_login(login_clicks, username, password, session_data):
             no_update
         )
 
-# Handle signup action
+
+# Handle signup action callback
 @callback(
-    [Output('login-output', 'children', allow_duplicate=True),
-     Output('login-output', 'style', allow_duplicate=True)],
-    Input('signup-button', 'n_clicks'),
-    [State('login-username', 'value'),
-     State('login-password', 'value'),
-     State('login-email', 'value'),
-     State('login-confirm-password', 'value')],
+    [
+        Output('login-output', 'children', allow_duplicate=True),  # Show signup status message
+        Output('login-output', 'style', allow_duplicate=True)      # Style signup status message
+    ],
+    Input('signup-button', 'n_clicks'),  # Triggered when signup button clicked
+    [
+        State('login-username', 'value'),         # Username input during signup
+        State('login-password', 'value'),         # Password input during signup
+        State('login-email', 'value'),             # Email input during signup
+        State('login-confirm-password', 'value')  # Confirm password input during signup
+    ],
     prevent_initial_call=True,
     allow_duplicate=True
 )
 def handle_signin(n_clicks, username, password, email, confirm_password):
     if not n_clicks:
-        return no_update
+        return no_update  # Do nothing if signup button not clicked
+
+    # Validate that all fields are filled
     if not all([username, password, email, confirm_password]):
-        return ("Please, fill all the fields.", 
-                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'})
+        return (
+            "Please, fill all the fields.",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+        )
+
+    # Validate password confirmation matches
     if password != confirm_password:
-        return ("The passwords are different.", 
-                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'})
+        return (
+            "The passwords are different.",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+        )
+
     try:
+        # Send POST request to signup API with registration data
         res = requests.post("http://localhost:5001/api/signin", json={
             "username": username,
             "password": password,
             "email": email
         })
+
         if res.status_code in (200, 201):
-            return ("Registration completed! Now you can login.", 
-                    {'color': '#0ea80e', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'})
+            # Successful registration: notify user they can login now
+            return (
+                "Registration completed! Now you can login.",
+                {'color': '#0ea80e', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+            )
         else:
-            return (f"Error in registration: {res.status_code} - {res.text}", 
-                    {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'})
+            # Registration error: display error message from server
+            return (
+                f"Error in registration: {res.status_code} - {res.text}",
+                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+            )
     except requests.exceptions.RequestException as e:
-        return (f"Connection error: {str(e)}", 
-                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'})
+        # Connection error during signup: show error message
+        return (
+            f"Connection error: {str(e)}",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+        )

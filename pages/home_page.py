@@ -209,7 +209,7 @@ def create_filtered_map(pollutant_group=None, province=None):
             style={"width": "100%", "height": "400px"}
         )
 
-# Main layout
+### LAYOUT -> HOME PAGE ###
 layout = html.Div([
     # Hero Section
     html.Div([
@@ -503,57 +503,71 @@ layout = html.Div([
     }),
 ])
 
+
+
+# Callback to update the dashboard components based on selected filters
 @callback(
-    [Output("sensor-map", "children"),
-     Output("station-info", "children"),
-     Output("sensor-histogram", "figure")],
-    [Input("pollutant-group-dropdown", "value"),
-     Input("province-dropdown", "value")]
+    [Output("sensor-map", "children"),           # Update the sensor map component
+     Output("station-info", "children"),        # Update the station info display
+     Output("sensor-histogram", "figure")],     # Update the sensor histogram figure
+    [Input("pollutant-group-dropdown", "value"),  # Trigger on pollutant group selection change
+     Input("province-dropdown", "value")]          # Trigger on province selection change
 )
 def update_dashboard(pollutant_group, province):
-    # Create updated map with auto-centering
+    # Create the updated map filtered and auto-centered based on filters
     sensor_map = create_filtered_map(pollutant_group, province)
 
-    # === Station info ===
+    # === Station information section ===
     try:
+        # Fetch station data from API or database
         df_stations = fetch_pollutant()
         if not df_stations.empty:
+            # Filter stations by selected pollutant group
             filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)
+            # If a specific province is selected (other than "All"), filter by it as well
             if province and province != "All":
                 filtered = filtered[filtered["provincia"] == province]
             
+            # Count unique stations and total number of sensors after filtering
             num_stations = filtered["nomestazione"].nunique()
             num_sensors = len(filtered)
             
-            # Enhanced station info with more details
+            # Prepare station info display text with details
             if province and province != "All":
+                # Show station and sensor count for selected province
                 station_info = html.Div([
                     html.Span(f"{num_stations} stations with {num_sensors} sensors in {province}", style={"fontWeight": "bold"}),
                     html.Br(),
+                    # Commented out optional message about map centering
                     # html.Span("Map automatically centered on selected province", style={"fontSize": "12px", "color": "#666", "fontStyle": "italic"})
                 ])
             else:
+                # Show counts across all provinces
                 station_info = html.Div([
                     html.Span(f"{num_stations} stations with {num_sensors} sensors across all provinces", style={"fontWeight": "bold"})
                 ])
         else:
+            # Handle case when no station data is available
             station_info = "No station data available"
     except Exception as e:
+        # Handle errors during station info fetching
         station_info = f"Error loading station info: {e}"
 
-    # === Enhanced Histogram ===
+    # === Enhanced sensor histogram section ===
     try:
+        # Fetch station data again (could be optimized to avoid double fetching)
         df_stations = fetch_pollutant()
         if df_stations.empty:
             raise ValueError("Empty station dataset")
 
+        # Filter by pollutant group and province as before
         filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)
         if province and province != "All":
             filtered = filtered[filtered["provincia"] == province]
 
         if not filtered.empty:
+            # If multiple provinces present, show sensor distribution by province
             if len(filtered["provincia"].unique()) > 1:
-                # Distribution by province
                 counts = filtered["provincia"].value_counts()
                 fig = px.bar(
                     x=counts.index,
@@ -563,7 +577,7 @@ def update_dashboard(pollutant_group, province):
                     color_discrete_sequence=["rgb(19, 129, 159)"]
                 )
             else:
-                # Distribution by pollutant type
+                # If single province, show sensor distribution by pollutant type
                 counts = filtered["nometiposensore"].value_counts().head(10)
                 fig = px.bar(
                     x=counts.values,
@@ -574,6 +588,7 @@ def update_dashboard(pollutant_group, province):
                     color_discrete_sequence=["rgb(19, 129, 159)"]
                 )
 
+            # Customize layout for better visualization
             fig.update_layout(
                 showlegend=False,
                 plot_bgcolor="white",
@@ -584,7 +599,7 @@ def update_dashboard(pollutant_group, province):
                 height=400
             )
 
-            # Enhanced annotation with pollutant group info
+            # Add annotation with pollutant group info and total sensors
             pollutant_text = f"Group: {pollutant_group}" if pollutant_group != "All" else "All Groups"
             fig.add_annotation(
                 text=f"Total Sensors: {len(filtered)}<br>{pollutant_text}",
@@ -598,9 +613,11 @@ def update_dashboard(pollutant_group, province):
                 font=dict(size=12, color="rgb(19, 129, 159)")
             )
         else:
+            # Raise error if no sensors found matching filters
             raise ValueError("No sensors found for the selected filters")
 
     except Exception as e:
+        # If error or no data, return empty figure with error message
         fig = go.Figure()
         fig.add_annotation(
             text=f"No sensor data available<br>{str(e)}",
@@ -618,4 +635,5 @@ def update_dashboard(pollutant_group, province):
             height=400
         )
 
+    # Return the updated map, station info text, and histogram figure
     return sensor_map, station_info, fig
