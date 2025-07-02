@@ -12,7 +12,7 @@ app.layout = html.Div([
 
     dcc.Store(id="session", storage_type="session"),
     dcc.Location(id="logout-redirect"),
-    dcc.Location(id="url"),  # Per abilitare i redirect #
+    # dcc.Location(id="url"),   Per abilitare i redirect #
     #
     # Navbar
     html.Div([
@@ -126,6 +126,7 @@ style={
     "minHeight": "100vh"   # altezza minima viewport
 })
 
+# Callback to handle logout
 @callback(
     [Output("session", "data", allow_duplicate=True),
      Output("logout-redirect", "href")],
@@ -134,8 +135,25 @@ style={
 )
 def logout(n_clicks):
     if n_clicks:
-        return {}, "/"  # oppure "/" per andare alla home
+        return {}, "/"  # Clear session data and redirect to home page
     return no_update, no_update
+
+# Callback to update the visibility of the logout button
+@callback(
+    Output("logout-button", "style"),
+    Input("session", "data"),
+)
+def update_logout_button_visibility(session_data):
+    if session_data and session_data.get("logged_in", False):
+        return {
+            "backgroundColor": "transparent",
+            "color": "white",
+            "border": "none",
+            "cursor": "pointer",
+            "fontSize": "16px",
+            "display": "inline-block"
+        }
+    return {"display": "none"}
 
 if __name__ == "__main__":
     print("🚀 GeoAir in esecuzione su http://127.0.0.1:8000")
