@@ -750,6 +750,11 @@ def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, 
     Update the chart and summary based on the selected analysis mode and parameters.
     Handles user authentication, input validation, data fetching, and visualization.
     """
+    # Convert start_date and end_date to datetime objects if provided
+    if start_date:
+        start_date = datetime.fromisoformat(start_date)
+    if end_date:
+        end_date = datetime.fromisoformat(end_date)
 
     # Check if user is logged in; if not, redirect to login page
     if not session_data or not session_data.get("logged_in"):

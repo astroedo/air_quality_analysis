@@ -326,6 +326,12 @@ def create_province_layer_legend(df_pollutant):
 )
 def update_all(selected_pollutant, start_date, end_date, session_data):
     
+    # convert start_date and end_date to datetime objects if they are provided
+    if start_date:
+        start_date = datetime.fromisoformat(start_date)
+    if end_date:
+        end_date = datetime.fromisoformat(end_date)
+
     # Check if the user is logged in, if not redirect to login page
     if not session_data or not session_data.get("logged_in"):
         return {}, {'display': 'none'}, "Please login.", [], [], {"display": "none"}, dcc.Location(href="/login", id="redirect-now")
