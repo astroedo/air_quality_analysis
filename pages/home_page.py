@@ -171,18 +171,12 @@ def create_filtered_map(pollutant_group=None, province=None):
                 if pd.notna(row["lat"]) and pd.notna(row["lng"]):
                     # Create color-coded markers based on number of sensors
                     num_sensors = len(row["nometiposensore"])
-                    if num_sensors <= 2:
-                        icon_color = "green"
-                    elif num_sensors <= 5:
-                        icon_color = "orange"
-                    else:
-                        icon_color = "red"
                     
                     popup_content = [
                         html.H4(row["nomestazione"], style={"margin": "5px 0", "color": "#2c3e50"}),
                         html.P(f"Province: {row['provincia']}", style={"margin": "2px 0", "fontWeight": "bold"}),
                         html.P(f"Coordinates: {row['lat']:.4f}, {row['lng']:.4f}", style={"margin": "2px 0", "fontSize": "12px", "color": "#666"}),
-                        html.P(f"Sensors: {num_sensors}", style={"margin": "5px 0", "fontWeight": "bold", "color": icon_color}),
+                        html.P(f"Sensors: {num_sensors}", style={"margin": "5px 0", "fontWeight": "bold"}),
                         html.P("Pollutants:", style={"margin": "5px 0 2px 0", "fontWeight": "bold"}),
                         html.Ul([html.Li(p, style={"fontSize": "12px"}) for p in row["nometiposensore"]], 
                                style={"margin": "0", "paddingLeft": "20px", "maxHeight": "100px", "overflowY": "auto"})
