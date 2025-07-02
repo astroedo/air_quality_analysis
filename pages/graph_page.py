@@ -167,6 +167,14 @@ def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None
         return pd.DataFrame()
 
 
+def fetch_nox_data_multiple(pollutants, province, start_date=None, end_date=None):
+    df_list = []
+    for pol in pollutants:
+        df = fetch_nox_data(pol, province, datainizio=start_date, datafine=end_date)
+        df["pollutant"] = pol
+        df_list.append(df)
+    return pd.concat(df_list, ignore_index=True) if df_list else pd.DataFrame()
+
 
 
 # Pollutant categories 
@@ -230,6 +238,53 @@ def create_nox_chart(df, pollutant, province, smoothing="raw"):
     )
     
     return fig
+
+def create_nox_chart_multi(df, smoothing="raw", province=None):
+    if df.empty:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available for the selected filters",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False,
+            font=dict(size=16, color="gray")
+        )
+        fig.update_layout(
+            title="No Data Available",
+            height=400
+        )
+        return fig
+
+    # Scegli colonna giusta per y (raw o smoothed)
+    df["y"] = df["valore"] if smoothing == "raw" else df["smoothed"]
+
+    fig = go.Figure()
+
+    for pollutant in df["pollutant"].unique():
+        sub_df = df[df["pollutant"] == pollutant]
+
+        fig.add_trace(go.Scatter(
+            x=sub_df["data"],
+            y=sub_df["y"],
+            mode="lines+markers",
+            name=pollutant,
+            line=dict(width=2),
+            marker=dict(size=4),
+            hovertemplate = "<b>%{x|%Y-%m-%d}</b><br>" + f"{pollutant}: %{{y:.2f}} μg/m³<extra></extra>"
+        ))
+
+    fig.update_layout(
+        title=f"NOx Pollutants in {province}",
+        xaxis_title="Date",
+        yaxis_title="Concentration (μg/m³)",
+        template="plotly_white",
+        hovermode="x unified",
+        height=500,
+        margin=dict(l=50, r=50, t=80, b=50)
+    )
+
+    return fig
+
 
 
 
@@ -374,6 +429,58 @@ def create_summary_cards(df, pollutant):
     
     return cards
 
+
+def create_summary_cards_per_pollutant(df, pollutants):
+    """Create summary cards for multiple pollutants"""
+    if df.empty:
+        return html.Div("No data available", style={"textAlign": "center", "color": "gray"})
+
+    cards = []
+
+    # Se è stringa singola, converti in lista
+    if isinstance(pollutants, str):
+        pollutants = [pollutants]
+
+    for pollutant in pollutants:
+        sub_df = df[df["pollutant"] == pollutant]
+        if sub_df.empty:
+            continue
+
+        avg_value = sub_df["valore"].mean()
+        max_value = sub_df["valore"].max()
+        min_value = sub_df["valore"].min()
+        data_points = len(sub_df)
+
+        cards.append(html.Div([
+            html.H4(pollutant, style={"margin": "0", "color": "#2c3e50"}),
+            html.P(f"Average: {avg_value:.1f} μg/m³", style={"margin": "4px 0", "color": "rgb(19, 129, 159)"}),
+            html.P(f"Max: {max_value:.1f} μg/m³", style={"margin": "4px 0", "color": "rgb(231, 76, 60)"}),
+            html.P(f"Min: {min_value:.1f} μg/m³", style={"margin": "4px 0", "color": "rgb(46, 204, 113)"}),
+            html.P(f"Data Points: {data_points}", style={"margin": "4px 0", "color": "#7f8c8d", "fontSize": "13px"})
+        ], style={
+            "backgroundColor": "white",
+            "padding": "15px",
+            "borderRadius": "10px",
+            "boxShadow": "0 2px 8px rgba(0,0,0,0.1)",
+            "textAlign": "center",
+            "minWidth": "180px",
+            "flex": "1",
+            "margin": "10px"
+        }))
+
+    return html.Div(cards, style={
+        "display": "flex",
+        "flexWrap": "wrap",
+        "justifyContent": "center",
+        "gap": "10px",
+        "margin": "20px 0"
+    })
+
+
+
+
+
+
 # Layout
 layout = html.Div([
     html.Div(id="redirect-trend"),
@@ -460,6 +567,23 @@ layout = html.Div([
     # Specialized Analysis Controls
     html.Div(id="nox-controls", children=[
         html.Div([
+
+            html.Div([
+                html.Label("🧪 Select Pollutants:", style={
+                    "fontWeight": "bold",
+                    "marginBottom": "8px",
+                    "display": "block",
+                    "color": "#2c3e50"
+                }),
+                dcc.Dropdown(
+                    id="specialized-pollutant-selector",
+                    options=[{"label": pol, "value": pol} for pol in pollutants],
+                    value=[],         # default list
+                    multi=True,            # consente selezione multipla
+                    clearable=False
+                )
+            ], style={"flex": "2", "marginRight": "15px"}),
+
             html.Div([
                 html.Label("🏢 Select Province:", style={
                     "fontWeight": "bold",
@@ -468,28 +592,12 @@ layout = html.Div([
                     "color": "#2c3e50"
                 }),
                 dcc.Dropdown(
-                    id="nox-province-selector",
-                    options=[{"label": p, "value": p} for p in get_provinces()],
-                    value="Milano",
+                    id="specialized-province-selector",
+                    options=[{"label": "All", "value": "All"}] + [{"label": p, "value": p} for p in get_provinces()],
+                    value="All",  # default value
                     clearable=False
                 )
             ], style={"flex": "1", "marginRight": "15px"}),
-            
-            html.Div([
-                html.Label("🧪 NOx Category:", style={
-                    "fontWeight": "bold",
-                    "marginBottom": "8px",
-                    "display": "block",
-                    "color": "#2c3e50"
-                }),
-                dcc.Dropdown(
-                    id="nox-pollutant-selector",
-                    options=[{"label": p, "value": p} for p in get_nox_categories()],
-                    value="NO2",
-                    clearable=False
-                )
-            ], style={"flex": "1", "marginRight": "15px"}),
-            
             
             
             html.Div([
@@ -500,7 +608,7 @@ layout = html.Div([
                     "color": "#2c3e50"
                 }),
                 dcc.Dropdown(
-                    id="nox-smoothing",
+                    id="specialized-smoothing",
                     options=get_smoothing_options(),
                     value="raw",
                     clearable=False
@@ -616,11 +724,11 @@ def update_station_options(selected_pollutant):
     [Input("analysis-mode", "value"),
      Input("trend-pollutant-selector", "value"),
      Input("trend-station-selector", "value"),
-     Input("nox-province-selector", "value"),
-     Input("nox-pollutant-selector", "value"),
+     Input("specialized-province-selector", "value"),
+     Input("specialized-pollutant-selector", "value"),
      Input("nox-date-range", "start_date"),
      Input("nox-date-range", "end_date"),
-     Input("nox-smoothing", "value"),
+     Input("specialized-smoothing", "value"),
      Input("session", "data")]
 )
 def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, start_date, end_date, smoothing, session_data):
@@ -669,19 +777,39 @@ def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, 
     
         else:
             # SPECIALIZED ANALYSIS 
-            # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
-            df_nox = fetch_nox_data(nox_pollutant, province, datainizio=start_date, datafine=end_date)
+            if not isinstance(nox_pollutant, list):
+                nox_pollutant = [nox_pollutant]  # garantisce che sia lista
+            if province == "All":
+                province = None
 
-            # Apply smoothing (moving average) here
+            df_nox = fetch_nox_data_multiple(nox_pollutant, province, start_date=start_date, end_date=end_date)
+            # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
+            if df_nox.empty or "valore" not in df_nox.columns:
+                fig = go.Figure()
+                fig.add_annotation(
+                    text="Nessun dato disponibile per il filtro selezionato",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=16, color="gray")
+                )
+                fig.update_layout(height=300)
+                summary = html.Div(
+                    "Nessun dato disponibile per il filtro selezionato",
+                    style={"textAlign": "center", "color": "gray", "padding": "20px"}
+                )
+                return fig, summary, no_update
+
             if smoothing == "smoothed_7":
-                df_nox["smoothed"] = df_nox["valore"].rolling(window=7, min_periods=1).mean()
+                df_nox["smoothed"] = df_nox.groupby("pollutant")["valore"].transform(lambda x: x.rolling(7, min_periods=1).mean())
             elif smoothing == "smoothed_14":
-                df_nox["smoothed"] = df_nox["valore"].rolling(window=14, min_periods=2).mean()
+                df_nox["smoothed"] = df_nox.groupby("pollutant")["valore"].transform(lambda x: x.rolling(14, min_periods=2).mean())
             else:
                 df_nox["smoothed"] = df_nox["valore"]
 
-            fig = create_nox_chart(df_nox, nox_pollutant, province, smoothing)
-            summary = create_summary_cards(df_nox, nox_pollutant)
+            fig = create_nox_chart_multi(df_nox, smoothing=smoothing, province=province)
+            summary = create_summary_cards_per_pollutant(df_nox, nox_pollutant)
+
+
 
         return fig, summary, no_update
 
