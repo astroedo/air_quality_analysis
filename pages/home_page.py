@@ -20,21 +20,21 @@ dash.register_page(__name__, path="/", name="Home")
 
 # Province coordinates for map centering
 PROVINCE_COORDINATES = {
-    "MI": [45.4642, 9.1900],   # Milano
-    "BG": [45.6983, 9.6773],   # Bergamo
-    "BS": [45.5416, 10.2118],  # Brescia
-    "CO": [45.8081, 9.0852],   # Como
-    "CR": [45.1370, 10.0222],  # Cremona
-    "LC": [45.8566, 9.3964],   # Lecco
-    "LO": [45.3142, 9.5034],   # Lodi
-    "MN": [45.1564, 10.7914],  # Mantova
-    "MB": [45.5845, 9.2744],   # Monza e Brianza
-    "PV": [45.1847, 9.1582],   # Pavia
-    "SO": [46.1712, 9.8718],   # Sondrio
-    "VA": [45.8205, 8.8250],   # Varese
-    "NO": [45.4445, 8,7833],   # Novara*
-    "RO": [45.0685,11.7229],  # Rovigo*
-    "VR": [45.4033, 10,9908],  # Verona*
+    "MI": [45.4642, 9.1900],    # Milano
+    "BG": [45.6983, 9.6773],    # Bergamo
+    "BS": [45.5416, 10.2118],   # Brescia
+    "CO": [45.8081, 9.0852],    # Como
+    "CR": [45.1370, 10.0222],   # Cremona
+    "LC": [45.8566, 9.3964],    # Lecco
+    "LO": [45.3142, 9.5034],    # Lodi
+    "MN": [45.1564, 10.7914],   # Mantova
+    "MB": [45.5845, 9.2744],    # Monza e Brianza
+    "PV": [45.1847, 9.1582],    # Pavia
+    "SO": [46.1712, 9.8718],    # Sondrio
+    "VA": [45.8205, 8.8250],    # Varese
+    "NO": [45.4445, 8.7833],    # Novara *
+    "RO": [45.0685, 11.7229],   # Rovigo *
+    "VR": [45.4033, 10.9908]    # Verona *
 }
 
 # Get available provinces
