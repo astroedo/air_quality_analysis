@@ -129,19 +129,18 @@ def fetch_data(pollutant, province=None, start_date=None, end_date=None):
 
         # Make GET request and check for errors
         response = requests.get(url, params=params)
-        logger
         response.raise_for_status()  
 
         data = response.json()
 
-            # If no data found with date filters, try without date constraints
-        if not data and (start_date or end_date):
-            print(f'No data found for date range {start_date} to {end_date}. Fetching all available data...')
-            # Remove date parameters and try again
-            params_no_date = {k: v for k, v in params.items() if k not in ["start_date", "end_date"]}
-            response = requests.get(url, params=params_no_date)
-            response.raise_for_status()
-            data = response.json()
+        # If no data found with date filters, try without date constraints
+        #if not data and (start_date or end_date):
+        #    print(f'No data found for date range {start_date} to {end_date}. Fetching all available data...')
+        #    # Remove date parameters and try again
+        #    params_no_date = {k: v for k, v in params.items() if k not in ["start_date", "end_date"]}
+        #    response = requests.get(url, params=params_no_date)
+        #    response.raise_for_status()
+        #    data = response.json()
 
         # Handle empty response
         if not data:
