@@ -173,141 +173,142 @@ def fetch_avg_province_pollutant(pollutants, start_date=None, end_date=None):
 
 # Function to create the province layer with colors based on pollutant values and create the legend
 def create_province_layer_legend(df_pollutant):
+    """
+    Creates a Dash Leaflet FeatureGroup with colored provinces based on pollutant levels,
+    and generates a corresponding legend.
 
-    # Map of province names to their sigla (abbreviations in database, Extent in the shapefile)
-    nome_to_sigla = { 
+    Parameters:
+        df_pollutant (DataFrame): DataFrame with columns 'provincia' and 'mean' containing
+                                  average pollutant levels per province.
+
+    Returns:
+        Tuple:
+            - dl.FeatureGroup: Leaflet polygons colored by pollution values
+            - list[html.Div]: HTML legend elements
+            - GeoDataFrame: GeoDataFrame merged with pollution data and color mapping
+    """
+
+    # Mapping province names (in shapefile) to abbreviations (used in database)
+    nome_to_sigla = {
         "Milano": "MI", "Bergamo": "BG", "Brescia": "BS",
         "Como": "CO", "Cremona": "CR", "Lecco": "LC",
         "Lodi": "LO", "Mantua": "MN", "Monza and Brianza": "MB",
         "Pavia": "PV", "Sondrio": "SO", "Varese": "VA"
     }
-    province["sigla"] = province["NAME_2"].map(nome_to_sigla) 
-    # makes sure the province names match the ones in the database and join with the pollutant data
+
+    # Add the province abbreviation to the shapefile
+    province["sigla"] = province["NAME_2"].map(nome_to_sigla)
+
+    # Join the shapefile with the pollutant data by province abbreviation
     gdf = province.merge(df_pollutant, left_on="sigla", right_on="provincia", how="left")
-    # calculating the max and min values for the color scale 
+
+    # Determine the min and max pollution values
     min_val = gdf["mean"].min()
     max_val = gdf["mean"].max()
 
     if pd.isna(min_val) or pd.isna(max_val):
-        return []
-    else:
-    # Function to get the color based on the value
-        def get_color(val):
-            if pd.isna(val):
-                return "#cccccc"  # grey for missing data
-            if max_val - min_val < 1e-6: # if all values are the same, set a neutral color
-                norm = 0.5
-            else:
-                norm = (val - min_val) / (max_val - min_val) # normalize the value between 0 and 1
-            # color scale from green (low pollution) to yellow (medium pollution) to red (high pollution)
-            if norm < 0.5:
-                # from green to yellow
-                r = int(255 * norm * 2)
-                g = 255
-                b = 0
-            else:
-                # from yellow to red
-                r = 255
-                g = int(255 * (1 - norm) * 2)
-                b = 0
-            # return the color in hex format
-            return f"#{r:02x}{g:02x}{b:02x}"
+        # If values are missing or undefined, return an empty layer
+        logger.warning("Pollution data missing or incomplete. Returning empty layers.")
+        return [], [], gdf
 
-        # Create legend values from min to max, divided into 4 intervals
-        legend_values = [min_val + i * (max_val - min_val) / 4 for i in range(5)]
-        # Add the title of the legend
-        legend_elements = [html.P("Pollution Level", style={"margin": "0 0 10px 0", "fontWeight": "bold"})] 
-        # Create ranges for the legend
-        legend_ranges = [(legend_values[i], legend_values[i + 1]) for i in range(len(legend_values) - 1)]
-        # Create colors for the legend based on the ranges
-        legend_colors = [get_color((r[0] + r[1]) / 2) for r in legend_ranges]
-        
-        # Add legend elements with colors and ranges
-        for (min_val, max_val), color in zip(legend_ranges, legend_colors):
-            legend_elements.append(
-                html.Div([ # legend internal layout
-                    html.Div(style={
-                        "width": "20px",
-                        "height": "15px",
-                        "backgroundColor": color,
-                        "border": "1px solid black",
-                        "marginRight": "8px",
-                        "display": "inline-block"
-                    }),
-                    html.Span(f"{min_val:.1f} - {max_val:.1f}", style={"verticalAlign": "top"})
-                ], style={"display": "flex", "alignItems": "center", "margin": "3px 0"})
-            )
-        # Add "No data"
+    # Color function from green to yellow to red based on normalized pollution values
+    def get_color(val):
+        if pd.isna(val):
+            return "#cccccc"  # Gray for missing values
+        if max_val - min_val < 1e-6:
+            norm = 0.5  # If all values are identical, use middle of scale
+        else:
+            norm = (val - min_val) / (max_val - min_val)
+        if norm < 0.5:
+            # Green to yellow
+            r = int(255 * norm * 2)
+            g = 255
+        else:
+            # Yellow to red
+            r = 255
+            g = int(255 * (1 - norm) * 2)
+        b = 0
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    # Create legend intervals
+    legend_values = [min_val + i * (max_val - min_val) / 4 for i in range(5)]
+    legend_ranges = [(legend_values[i], legend_values[i + 1]) for i in range(4)]
+    legend_colors = [get_color((r[0] + r[1]) / 2) for r in legend_ranges]
+
+    # Build HTML legend elements
+    legend_elements = [html.P("Pollution Level", style={"margin": "0 0 10px 0", "fontWeight": "bold"})]
+    for (min_r, max_r), color in zip(legend_ranges, legend_colors):
         legend_elements.append(
             html.Div([
                 html.Div(style={
                     "width": "20px",
                     "height": "15px",
-                    "backgroundColor": "#cccccc",
+                    "backgroundColor": color,
                     "border": "1px solid black",
                     "marginRight": "8px",
                     "display": "inline-block"
                 }),
-                html.Span("No data", style={"verticalAlign": "top"})
+                html.Span(f"{min_r:.1f} - {max_r:.1f}", style={"verticalAlign": "top"})
             ], style={"display": "flex", "alignItems": "center", "margin": "3px 0"})
-        ) 
+        )
 
-    # Function to get the color for each province based on the mean value
-    def get_color_discrete(val, legend_ranges, legend_colors):
+    # Add "No data" to the legend
+    legend_elements.append(
+        html.Div([
+            html.Div(style={
+                "width": "20px",
+                "height": "15px",
+                "backgroundColor": "#cccccc",
+                "border": "1px solid black",
+                "marginRight": "8px",
+                "display": "inline-block"
+            }),
+            html.Span("No data", style={"verticalAlign": "top"})
+        ], style={"display": "flex", "alignItems": "center", "margin": "3px 0"})
+    )
+
+    # Discrete color assignment for each province based on ranges
+    def get_color_discrete(val, ranges, colors):
         if pd.isna(val):
-            return "#cccccc"  # no data
-        for (min_r, max_r), color in zip(legend_ranges, legend_colors): 
+            return "#cccccc"
+        for (min_r, max_r), color in zip(ranges, colors):
             if min_r <= val <= max_r:
                 return color
-        # Se valore fuori range massimo, assegna colore ultimo intervallo
-        return legend_colors[-1]
+        return colors[-1]
 
-    # Apply the color function to each province based on the mean value
+    # Assign colors and tooltips to the GeoDataFrame
     gdf["color"] = [get_color_discrete(val, legend_ranges, legend_colors) for val in gdf["mean"]]
-    # Create a tooltip with the province name and mean value, visible on hover
-    gdf["tooltip"] = gdf["NAME_2"] + ": " + gdf["mean"].round(2).astype(str)
+    gdf["tooltip"] = gdf.apply(
+        lambda row: f"{row['NAME_2']}: {row['mean']:.2f}" if pd.notna(row["mean"]) else f"{row['NAME_2']}: No data",
+        axis=1
+    )
 
-    # Create a list of children for the LayerGroup, list of polygons for each province
-    children = []
-    # Add polygons for each province
+    # Create Leaflet polygons for each province
+    polygons = []
     for _, row in gdf.iterrows():
-        # get the geometry of the province
         geom = row["geometry"]
+        coords = []
         if geom.geom_type == 'Polygon':
-            coords = [[[lat, lon] for lon, lat in geom.exterior.coords]] 
+            coords = [[[lat, lon] for lon, lat in geom.exterior.coords]]
         elif geom.geom_type == 'MultiPolygon':
-            coords = []
-            for poly in geom.geoms:
-                coords.append([[lat, lon] for lon, lat in poly.exterior.coords])
-        
-        # Set the fill color and tooltip text based on the mean value
-        if pd.isna(row["mean"]):
-            fill_color = "#cccccc"  # grey for missing data
-            tooltip_text = f"{row['NAME_2']}: No data"
-        else:
-            fill_color = row["color"]
-            tooltip_text = f"{row['NAME_2']}: {row['mean']:.2f}"
-        
-        # Create the polygon with the coordinates, fill color and tooltip
+            coords = [[[lat, lon] for lon, lat in poly.exterior.coords] for poly in geom.geoms]
+
         polygon = dl.Polygon(
-            id=f"poly-{uuid4()}", # unique id for each polygon
+            id=f"poly-{uuid4()}",
             positions=coords,
-            fillColor=fill_color,
+            fillColor=row["color"],
             fillOpacity=0.7,
             color="black",
             weight=1,
-            children=[
-                dl.Tooltip(
-                    children=tooltip_text,
-                    permanent=False,
-                    sticky=True
-                )
-            ]
+            children=[dl.Tooltip(children=row["tooltip"], permanent=False, sticky=True)]
         )
-        # add the polygon to the list of children
-        children.append(polygon)
-    # return a LayerGroup with the list of polygons and the legend 
-    return dl.FeatureGroup(children=children), legend_elements, gdf
+        polygons.append(polygon)
+    
+    logger.info("Province layer legend created successfully.")
+
+    # Return map layer, legend, and enriched GeoDataFrame
+    return dl.FeatureGroup(children=polygons), legend_elements, gdf
+
 
 
 # Callback to update the map and histogram based on the selected pollutant and date range
@@ -380,7 +381,7 @@ def update_all(selected_pollutant, start_date, end_date, session_data):
                     'text': fig.layout.title.text,  # mantiene il testo attuale del titolo
                     'font': {'size': 24, 'family': 'Arial', 'color': 'black', 'weight': 'bold'}}
                 )
-                print("Updating map layer with", len(layer.children), "polygons")
+                logger.info(f"Updating map layer with {len(layer.children)} polygons")
                 if not start_date or not end_date:
                     return fig, {'display': 'block'}, "Showing the last 7 days average. Else insert a time range", layer.children, legend, legend_style, no_update
                 return fig, {'display': 'block'}, "", layer.children, legend, legend_style, no_update
@@ -429,6 +430,6 @@ def genera_shapefile(n_clicks, selected_pollutant, start_date, end_date):
         return dcc.send_bytes(zip_buffer.read(), filename="GeoAir_map.zip")
 
     except Exception as e: # if there is an error in the shapefile generation, print the error and return no update
-        print(f"Error in the shapefile download: {e}")
+        logger.error(f"Error in the shapefile download: {e}")
         return dash.no_update
 

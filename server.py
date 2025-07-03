@@ -3,12 +3,16 @@ import psycopg2
 import pandas as pd
 import warnings
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 # Filtro selettivo per il warning di pandas su psycopg2
 warnings.filterwarnings(
     "ignore",
     category=UserWarning,
     message="pandas only supports SQLAlchemy connectable*"
 )
+
+
 
 app = Flask(__name__)
 
@@ -32,12 +36,6 @@ def check_user_exists(username):
     return 1 if result else 0
 
 # Login
-from werkzeug.security import generate_password_hash, check_password_hash
-
-app = Flask(__name__)
-
-
-
 @app.route('/api/login', methods=['POST'])
 def login():
     conn = db_connection()
@@ -162,8 +160,6 @@ def get_stations():
 @app.route('/api/measurements', methods=['GET'])
 def get_measurements():
     idsensore = request.args.get('idsensore', default=None, type=str)
-    datainizio = request.args.get('datainizio', default=None, type=str)
-    datafine = request.args.get('datafine', default=None, type=str)
 
     try:
         conn = db_connection()
@@ -174,14 +170,6 @@ def get_measurements():
         if idsensore:
             base_query += " AND idsensore = %s"
             params.append(idsensore)
-
-        if datainizio:
-            base_query += " AND data >= %s"
-            params.append(datainizio)
-
-        if datafine:
-            base_query += " AND data <= %s"
-            params.append(datafine)
 
         base_query += " ORDER BY data ASC"
 
@@ -196,65 +184,14 @@ def get_measurements():
 
 
 
-@app.route('/api/measurements2', methods=['GET'])
-def api_get_measurements():
-    pollutant_group = request.args.get('pollutant_group', type=str)
-    province = request.args.get('province', type=str)
-    start_date = request.args.get('start_date', type=str)
-    end_date = request.args.get('end_date', type=str)
-
-    try:
-        conn = db_connection()
-        query = """
-            SELECT m.valore, s.nometiposensore, s.provincia, s.nomestazione, m.data
-            FROM measurement m
-            JOIN station s ON m.idsensore = s.idsensore
-            WHERE m.valore IS NOT NULL AND s.lat IS NOT NULL AND s.lng IS NOT NULL
-        """
-        params = []
-
-        if pollutant_group and pollutant_group != "All":
-            if pollutant_group == "PM":
-                query += " AND (s.nometiposensore LIKE 'PM%')"
-            elif pollutant_group == "NOx":
-                query += " AND (s.nometiposensore IN ('NO', 'NO2', 'NOx'))"
-            elif pollutant_group == "Ozone":
-                query += " AND s.nometiposensore = 'O3'"
-            else:
-                query += " AND s.nometiposensore = %s"
-                params.append(pollutant_group)
-
-        if province and province != "All":
-            query += " AND s.provincia = %s"
-            params.append(province)
-
-        if start_date:
-            query += " AND m.data >= %s"
-            params.append(start_date)
-
-        if end_date:
-            query += " AND m.data <= %s"
-            params.append(end_date)
-
-        query += " ORDER BY m.data DESC LIMIT 10000"
-
-        df = pd.read_sql_query(query, conn, params=params)
-        conn.close()
-
-        data = df.to_dict(orient='records')
-        return jsonify(data)
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-
-@app.route('/api/measurements_by_province', methods=['GET'])
-def get_measurements_by_province():
+@app.route('/api/measurements_filters', methods=['GET'])
+def get_measurements_filters():
     # Get query parameters from URL
     provincia = request.args.get('provincia', type=str)
     pollutant = request.args.get('pollutant', type=str)
-    datainizio = request.args.get('datainizio', type=str)
-    datafine = request.args.get('datafine', type=str)
+    start_date = request.args.get('start_date', type=str)
+    end_date = request.args.get('end_date', type=str)
+
 
     try:
         conn = db_connection()
@@ -287,13 +224,13 @@ def get_measurements_by_province():
             base_query += " AND s.nometiposensore = %s"
             params.append(pollutant)
 
-        if datainizio:
+        if start_date:
             base_query += " AND m.data >= %s"
-            params.append(datainizio)
+            params.append(start_date)
 
-        if datafine:
+        if end_date:
             base_query += " AND m.data <= %s"
-            params.append(datafine)
+            params.append(end_date)
 
         # Finalize the query with GROUP BY and ORDER BY
         base_query += f" {group_by_clause} ORDER BY m.data"

@@ -39,7 +39,7 @@ def get_idsensore(df, nometiposensore=None, nomestazione=None):
     return idsensori.tolist()
 
 
-def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
+def fetch_sensor_data_api(idsensore=None):
     """
     Fetch sensor measurement data from the API endpoint,
     returning a DataFrame with relevant columns.
@@ -51,10 +51,6 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
         # Add parameters if provided for sensor ID and date range
         if idsensore:
             params['idsensore'] = idsensore
-        if datainizio:
-            params['datainizio'] = datainizio
-        if datafine:
-            params['datafine'] = datafine
 
         # Call the API and check response status
         response = requests.get(url, params=params)
@@ -87,7 +83,7 @@ def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
         return df[['data', 'valore', 'nomestazione', 'nometiposensore', 'stato']]
 
     except Exception as e:
-        print(f"Error fetching sensor data from API: {e}")
+        logger.error(f"Error fetching sensor data from API: {e}")
         return pd.DataFrame()
 
 
@@ -106,16 +102,16 @@ def get_provinces():
         return df["provincia"].dropna().tolist()
     
     except requests.RequestException as e:
-        print(f"API Error: {e}")
+        logger.error(f"API Error: {e}")
         return []
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         return []
 
 
 # Fetch measurements data filtered by pollutant and optionally province and date range
-def fetch_data(pollutant, province=None, time_period="full", datainizio=None, datafine=None):
-    """Fetch data calling the API endpoint for measurements by province"""
+def fetch_data(pollutant, province=None, start_date=None, end_date=None):
+    """Fetch data calling the API endpoint for measurements filters"""
 
     # Prepare query parameters for API call
     params = {
@@ -123,23 +119,24 @@ def fetch_data(pollutant, province=None, time_period="full", datainizio=None, da
     }
     if province:
         params["provincia"] = province
-    if datainizio:
-        params["datainizio"] = datainizio
-    if datafine:
-        params["datafine"] = datafine
+    if start_date:
+        params["start_date"] = start_date
+    if end_date:
+        params["end_date"] = end_date
 
     try:
-        url = "http://localhost:5001/api/measurements_by_province"
+        url = "http://localhost:5001/api/measurements_filters"
 
         # Make GET request and check for errors
         response = requests.get(url, params=params)
+        logger
         response.raise_for_status()  
 
         data = response.json()
 
         # Handle empty response
         if not data:
-            print('No data found for the specified filters.')
+            logger.warning(f"No data found for pollutant: '{pollutant}', province: '{province}', start_date: '{start_date}', end_date: '{end_date}' ")
             return pd.DataFrame()
 
         # Convert to DataFrame and clean data
@@ -151,21 +148,15 @@ def fetch_data(pollutant, province=None, time_period="full", datainizio=None, da
         # Calculate 7-day rolling average for smoothing
         df["smoothed"] = df["valore"].rolling(window=7, min_periods=1).mean()
 
-        # Filter data by first or second half of the year if requested
-        if time_period == "first":
-            df = df[df["data"].dt.month <= 6]
-        elif time_period == "second":
-            df = df[df["data"].dt.month > 6]
-
-        logger.info(f"Data fetched successfully -> pollutant: '{pollutant}', province: '{province}' ")
+        logger.info(f"Fetched successfully -> pollutant: '{pollutant}', province: '{province}', start_date: '{start_date}', end_date: '{end_date}'  ")
 
         return df
 
     except requests.RequestException as e:
-        print(f"API call error: {e}")
+        logger.error(f"API call error: {e}")
         return pd.DataFrame()
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         return pd.DataFrame()
 
 
@@ -173,7 +164,7 @@ def fetch_data(pollutant, province=None, time_period="full", datainizio=None, da
 def fetch_data_multiple(pollutants, province, start_date=None, end_date=None):
     df_list = []
     for pol in pollutants:
-        df = fetch_data(pol, province, datainizio=start_date, datafine=end_date)
+        df = fetch_data(pol, province, start_date, end_date)
         df["pollutant"] = pol
         df_list.append(df)
     # Concatenate all dataframes if any, else return empty
@@ -817,7 +808,7 @@ def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, 
         # Fetch data for multiple pollutants with date range filtering
         df_nox = fetch_data_multiple(nox_pollutant, province, start_date=start_date, end_date=end_date)
         
-        # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
+        # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, smoothing: {smoothing} \n\n")
 
         # Handle case where no data is returned or expected column missing
         if df_nox.empty or "valore" not in df_nox.columns:

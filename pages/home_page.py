@@ -49,10 +49,10 @@ def get_provinces():
         return df["provincia"].dropna().tolist()
     
     except requests.RequestException as e:
-        print(f"Error fetching provinces: {e}")
+        logger.error(f"Error fetching provinces: {e}")
         return []
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         return []
 
 # Improved pollutant group filtering function
@@ -200,7 +200,7 @@ def create_filtered_map(pollutant_group=None, province=None):
         )
 
     except Exception as e:
-        print(f"Error creating map: {e}")
+        logger.error(f"Error creating map: {e}")
         center, zoom = get_map_center_and_zoom(pd.DataFrame(), province)
         return dl.Map(
             center=center,
