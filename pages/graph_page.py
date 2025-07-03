@@ -134,6 +134,15 @@ def fetch_data(pollutant, province=None, start_date=None, end_date=None):
 
         data = response.json()
 
+            # If no data found with date filters, try without date constraints
+        if not data and (datainizio or datafine):
+            print(f'No data found for date range {datainizio} to {datafine}. Fetching all available data...')
+            # Remove date parameters and try again
+            params_no_date = {k: v for k, v in params.items() if k not in ["datainizio", "datafine"]}
+            response = requests.get(url, params=params_no_date)
+            response.raise_for_status()
+            data = response.json()
+
         # Handle empty response
         if not data:
             logger.warning(f"No data found for pollutant: '{pollutant}', province: '{province}', start_date: '{start_date}', end_date: '{end_date}' ")
@@ -264,7 +273,7 @@ def create_nox_chart_multi(df, smoothing="raw", province=None):
         ))
 
     fig.update_layout(
-        title=f"NOx Pollutants in {province}",
+        title=f"Pollutants in {'All Provinces' if not province else province}",
         xaxis_title="Date",
         yaxis_title="Concentration (μg/m³)",
         template="plotly_white",
@@ -480,13 +489,13 @@ layout = html.Div([
     html.Div(id="redirect-trend"),
     # Page Header
     html.Div([
-        html.H1("📈 Air Quality Trends Analysis", style={
+        html.H1("Air Quality Trends Analysis", style={
             "textAlign": "center",
             "color": "rgb(19, 129, 159)",
             "marginBottom": "10px",
             "fontSize": "32px"
         }),
-        html.P("Analyze temporal patterns in air quality measurements with specialized NOx analysis", style={
+        html.P("Analyze temporal patterns for each station in Lombardy region or compare the different pollutant with the specialized analysis", style={
             "textAlign": "center",
             "color": "#7f8c8d",
             "fontSize": "16px",
@@ -496,7 +505,7 @@ layout = html.Div([
     
     # Analysis Mode Selector
     html.Div([
-        html.H3("🔬 Select Analysis Mode", style={"color": "#2c3e50", "marginBottom": "15px"}),
+        html.H3("Select Analysis Mode", style={"color": "#2c3e50", "marginBottom": "15px"}),
         dcc.RadioItems(
             id="analysis-mode",
             options=[
@@ -519,7 +528,7 @@ layout = html.Div([
     html.Div(id="general-controls", children=[
         html.Div([
             html.Div([
-                html.Label("🔬 Select Pollutant:", style={
+                html.Label("Select Pollutant:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -535,7 +544,7 @@ layout = html.Div([
             ], style={"flex": "1", "marginRight": "20px"}),
             
             html.Div([
-                html.Label("🏭 Select Station:", style={
+                html.Label("Select Station:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -563,7 +572,7 @@ layout = html.Div([
         html.Div([
 
             html.Div([
-                html.Label("🧪 Select Pollutants:", style={
+                html.Label("Select Pollutants:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -579,7 +588,7 @@ layout = html.Div([
             ], style={"flex": "2", "marginRight": "15px"}),
 
             html.Div([
-                html.Label("🏢 Select Province:", style={
+                html.Label("Select Province:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -595,7 +604,7 @@ layout = html.Div([
             
             
             html.Div([
-                html.Label("📊 Data Smoothing:", style={
+                html.Label("Data Smoothing:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -610,7 +619,7 @@ layout = html.Div([
             ], style={"flex": "1", "marginRight": "15px"}),
 
             html.Div([
-                html.Label("📅 Date Range:", style={
+                html.Label("Date Range:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -660,15 +669,6 @@ layout = html.Div([
     }),
     
     # Footer Info
-    html.Div([
-        html.P("💡 Tip: Switch between General and NOx analysis modes to explore different aspects of air quality data.", style={
-            "textAlign": "center",
-            "color": "#95a5a6",
-            "fontSize": "14px",
-            "fontStyle": "italic",
-            "margin": "20px"
-        })
-    ])
 ], style={
     "maxWidth": "1200px",
     "margin": "auto",
