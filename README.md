@@ -6,8 +6,34 @@ Italian public authorities collect, process, and analyze air quality data to mon
 You are asked to develop a client-server application that supports users in querying and visualizing data retrieved from the Dati Lombardia air quality sensor dataset. The system should integrate and process real-time or historical air quality measurements to provide insights into pollution distribution, trends, and exposure risks.
 
 
-
-
+AIR_QUALITY_ANALYSIS/
+├── requirements.txt       # Python dependencies list
+│
+├── database/              # Jupyter notebooks for DB setup and data loading
+│   ├── database_station.ipynb
+│   ├── database_measurement.ipynb
+│   └── database_user.ipynb
+│
+├── server.py              # Flask backend API and DB interface
+│
+├── app.py                 # Main Dash frontend app
+│
+├── pages/                 # Dash page layouts and callbacks
+│   ├── home_page.py       # Home
+│   ├── login_page.py      # Login
+│   ├── map_page.py        # Map of the stations
+│   └── graph_page.py      # Graph of the pollutants
+│
+├── components/
+│   ├── map_component.py            # api for the map1
+│   ├── dropdown_component.py                   
+│   │
+│   ├── fetch_pollutant.py          # api for the map1
+│   └── logger.py                            
+│
+├── maps/                  # file for the map like .shp       
+│
+└── assets/                # CSS, logo, img 
 
 
 
