@@ -415,8 +415,8 @@ layout = html.Div([
             html.Div([
                 html.Div([
                     # Profile Picture or Initials
-                    html.Div(
-                        "GB",
+                    html.Img(
+                        src="/assets/team/Gianluca.jpg",
                         style={
                             "width": "80px",
                             "height": "80px",
@@ -521,7 +521,7 @@ layout = html.Div([
                 html.Div([
                     # Profile Picture or Initials
                     html.Img(
-                        src = "/assets/team/Edoardo.jpeg",
+                        src="/assets/team/Edoardo.jpeg",
                         style={
                             "width": "80px",
                             "height": "80px",
