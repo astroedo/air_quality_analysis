@@ -17,7 +17,7 @@ GeoAir is a comprehensive web-based platform for analyzing and visualizing air q
 ## User management
 * Session Management: Persistent user sessions
 
-# 🚀 Quick Start
+# Quick Start
 
 ## 1. Clone the Repository
 ```bash
