@@ -1,53 +1,82 @@
-# Air Quality Analysis 🍃
+# Geoair 
 
-Italian public authorities collect, process, and analyze air quality data to monitor pollution levels and their impact on public health. By combining air pollution data with sensor and administrative datasets, decision-makers (such as environmental agencies and public health organizations) can better understand pollution trends and exposure risks. The aim of this project is to visualize and analyze air quality data from Dati Lombardia to assess pollution levels and trends at different administrative levels within the region.
+GeoAir is a comprehensive web-based platform for analyzing and visualizing air quality data across the Lombardia region of Italy. Built with modern web technologies, it provides interactive maps, trend analysis, and real-time data visualization to support environmental decision-making.
 
-## Project Goals:
-You are asked to develop a client-server application that supports users in querying and visualizing data retrieved from the Dati Lombardia air quality sensor dataset. The system should integrate and process real-time or historical air quality measurements to provide insights into pollution distribution, trends, and exposure risks.
+# Key features 
+## Interactive Geospatial Visualization
+* Dynamic Province Maps: Color-coded pollution levels with historical data overlays
+* Station Mapping: Interactive markers showing sensor locations and pollutant types
+* Downloadable Shapefiles: Export map data for GIS analysis
+
+## Advanced Analytics Dashboard
+* Multi-pollutant Comparison: Analyze multiple pollutants simultaneously
+* Temporal Trend Analysis: Historical data with smoothing options (7-day, 14-day averages)
+* Statistical Summaries: Min, max, average, and data point counts
+* Specialized Analysis: Dedicated tools for different compounds
+
+## User management
+* Session Management: Persistent user sessions
+
+# Quick start
+## Prerequisites
+* Python: 3.8 or higher
+* PostgreSQL 12+ with PostGIS estention
+
+## 1. Clone repository
+
+git clone https://github.com/astroedo/air_quality_analysis.git
+cd air_quality_analysis
+
+## Requirements
+
+pip install -r requirements.txt
+
+## Configure database
+
+createdb lombardia_air_quality
+
+## Create user (update credentials in server.py)
+psql -c "CREATE USER airdata_user WITH PASSWORD 'user';"
+psql -c "GRANT ALL PRIVILEGES ON DATABASE lombardia_air_quality TO airdata_user;"
+
+## Initialize the database
+### Run the Jupyter notebooks in order:
+jupyter notebook database/database_user.ipynb           # Create user tables
+jupyter notebook database/database_station.ipynb        # Load station data
+jupyter notebook database/database_measurement.ipynb    # Load measurement data
+
+## Launch the application
+
+### Terminal 1: Start the Flask API server
+python server.py
+
+### Terminal 2: Start the Dash frontend
+python app.py
 
 
-AIR_QUALITY_ANALYSIS/
-├── requirements.txt       # Python dependencies list
-│
-├── database/              # Jupyter notebooks for DB setup and data loading
-│   ├── database_station.ipynb
-│   ├── database_measurement.ipynb
-│   └── database_user.ipynb
-│
-├── server.py              # Flask backend API and DB interface
-│
-├── app.py                 # Main Dash frontend app
-│
-├── pages/                 # Dash page layouts and callbacks
-│   ├── home_page.py       # Home
-│   ├── login_page.py      # Login
-│   ├── map_page.py        # Map of the stations
-│   └── graph_page.py      # Graph of the pollutants
-│
-├── components/
-│   ├── map_component.py            # api for the map1
-│   ├── dropdown_component.py                   
-│   │
-│   ├── fetch_pollutant.py          # api for the map1
-│   └── logger.py                            
-│
-├── maps/                  # file for the map like .shp       
-│
-└── assets/                # CSS, logo, img 
+# Data Sources 
+The platform integrates data from Dati Lombardia, the official open data portal of the Lombardy region:
+
+## Station Data: Air Quality Stations
+
+Station locations, sensor types, administrative info
+API: https://www.dati.lombardia.it/resource/ib47-atvt.json
 
 
+## Measurement Data: Air Sensor Data from 2018
+
+Historical measurements
+API: https://www.dati.lombardia.it/resource/g2hp-ar79.json
 
 
-Project API
-measurement: https://www.dati.lombardia.it/Ambiente/Dati-sensori-aria-dal-2018/g2hp-ar79/about_data
-API:         https://www.dati.lombardia.it/resource/g2hp-ar79.json
-    idsensore, data, valore, stato, idoperatore
+# Support
+If you encounter any issues or have questions:
 
-station:     https://www.dati.lombardia.it/Ambiente/Stazioni-qualit-dell-aria/ib47-atvt/about_data
-API:         https://www.dati.lombardia.it/resource/ib47-atvt.json
-    idsensore, nometiposensore, unitamisura, idstazione, nomestazione,
-    quota, provincia, comune, storico, datastart, datastop, utm_nord,
-    utm_est, lat, lng, locationtxt, location(geometry:point)
+1. Create a new issue with detailed information
+2. Contact the development team
 
+# Acknowledgments
 
-N.B. API format: .csv .json .geojson 
+* Regione Lombardia for providing open air quality data
+* Dati Lombardia platform for data accessibility
+
