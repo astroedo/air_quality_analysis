@@ -5,7 +5,6 @@ import plotly.express as px
 import pandas as pd
 from datetime import datetime, timedelta
 from components.fetch_pollutant import fetch_pollutant
-import numpy as np
 import requests
 from components.logger import logger
 
@@ -77,7 +76,7 @@ def fetch_sensor_data_api(idsensore=None):
             df['data'] = pd.to_datetime(df['data'])
             df = df.sort_values('data')
 
-        logger.info("Sensor data fetched successfully")
+        logger.info(f"Filter: '{idsensore}' - Sensors data fetched successfully.")
 
         # Return selected columns
         return df[['data', 'valore', 'nomestazione', 'nometiposensore', 'stato']]
@@ -97,7 +96,7 @@ def get_provinces():
         # Convert list to DataFrame
         df = pd.DataFrame(data, columns=["provincia"])
         
-        logger.info("Provinces fetched successfully")
+        logger.info("All provinces fetched successfully")
         # Return cleaned list of provinces without NaNs
         return df["provincia"].dropna().tolist()
     

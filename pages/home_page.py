@@ -45,7 +45,7 @@ def get_provinces():
         data = response.json()
         
         df = pd.DataFrame(data, columns=["provincia"])
-        logger.info("Provinces fetched successfully")
+        logger.info("All provinces fetched successfully")
         return df["provincia"].dropna().tolist()
     
     except requests.RequestException as e:
@@ -148,7 +148,7 @@ def create_filtered_map(pollutant_group=None, province=None):
                 style={"width": "100%", "height": "400px"}
             )
         
-        logger.info("Filtering stations for pollutant group: %s, province: %s", pollutant_group, province)
+        logger.info("Filters pollutant group: %s, province: %s", pollutant_group, province)
 
         # Apply filters
         filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)
@@ -578,10 +578,11 @@ def update_dashboard(pollutant_group, province):
     # Create the updated map filtered and auto-centered based on filters
     sensor_map = create_filtered_map(pollutant_group, province)
 
+    # Fetch station data from API or database
+    df_stations = fetch_pollutant()
+
     # === Station information section ===
     try:
-        # Fetch station data from API or database
-        df_stations = fetch_pollutant()
         if not df_stations.empty:
             # Filter stations by selected pollutant group
             filtered = filter_by_pollutant_group(df_stations.copy(), pollutant_group)
@@ -616,8 +617,6 @@ def update_dashboard(pollutant_group, province):
 
     # === Enhanced sensor histogram section ===
     try:
-        # Fetch station data again (could be optimized to avoid double fetching)
-        df_stations = fetch_pollutant()
         if df_stations.empty:
             raise ValueError("Empty station dataset")
 
