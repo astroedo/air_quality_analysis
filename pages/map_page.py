@@ -31,8 +31,18 @@ layout = html.Div([
     html.Div(id="redirect-map"),
 
     # Page titles
-    html.H2("Air Quality Map", style={"textAlign": "center"}),
-    html.H3("Average Pollutant Levels by Province", style={"textAlign": "center", "marginBottom": "20px"}),
+    html.H2("Air Quality Map", 
+            style={"textAlign": "center",
+                "color": "rgb(19, 129, 159)",
+                "fontSize": "32px",
+                "marginBottom": "10px", 
+                "marginTop": "40px"}),
+    html.H3("Average Pollutant Levels by Province", 
+            style={"textAlign": "center",
+            "color": "#7f8c8d",
+            "fontSize": "16px",
+            "marginBottom": "20px", 
+            "fontWeight": "normal"}),
 
     # Output area for messages
     html.Div(
@@ -372,6 +382,7 @@ def update_all(selected_pollutant, start_date, end_date, session_data):
                     title=f"Average '{selected_pollutant}' per Province in {unit}",
                     labels={"provincia": "Province", "mean": "Average Value"},
                     template="plotly_white",  
+                    color_discrete_sequence=["rgb(19, 129, 159)"]
                 )
                 fig.update_layout( # update the layout of the figure
                     xaxis_title="Province",
