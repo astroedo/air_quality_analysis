@@ -23,7 +23,7 @@ GeoAir is a comprehensive web-based platform for analyzing and visualizing air q
 * PostgreSQL 12+ with PostGIS estention
 
 ## 1. Clone repository
-'''
+'''bash
 git clone https://github.com/astroedo/air_quality_analysis.git
 cd air_quality_analysis
 '''
