@@ -1,14 +1,11 @@
-# pages/login_page.py
-
-# package imports
 import dash
-from dash import html, dcc, ctx
-from dash import Input, Output, State, callback, no_update
+from dash import html, dcc, Input, Output, State, callback, no_update
 import requests
-# Register the page with Dash
+from components.logger import logger
+
 dash.register_page(__name__, path='/login', name='Login')
 
-# style definitions
+# Styles
 input_style = {
     'padding': '10px',
     'width': '100%',
@@ -18,15 +15,20 @@ input_style = {
 }
 
 button_style = {
-    'padding': '10px',
+    'padding': '12px 20px',
     'width': '100%',
-    'borderRadius': '5px',
+    'borderRadius': '8px',
     'border': 'none',
     'backgroundColor': '#007b8f',
     'color': 'white',
-    'fontWeight': 'bold',
+    'fontWeight': '600',
+    'fontSize': '16px',
     'cursor': 'pointer',
-    'boxSizing': 'border-box'
+    'boxShadow': '0 4px 8px rgba(0, 123, 143, 0.3)',
+    'transition': 'background-color 0.3s ease, box-shadow 0.3s ease',
+    'userSelect': 'none',
+    'textAlign': 'center',
+    'fontFamily': "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
 }
 
 field_group_style = {
@@ -37,7 +39,7 @@ field_group_style = {
 
 form_card_style = {
     'width': '300px',
-    'margin': '100px auto',
+    'margin': '50px auto',
     'display': 'flex',
     'flexDirection': 'column',
     'gap': '10px',
@@ -48,133 +50,259 @@ form_card_style = {
     'boxSizing': 'border-box'
 }
 
-signup_style = {**field_group_style, 'display': 'block'}
 
-# Define the layout for the login page
+
+### LAYOUT -> LOGIN PAGE ###
 layout = html.Div([
-    dcc.Store(id="session", storage_type="session"),
-    html.H1("Login", id='page-title', style={'textAlign': 'center'}),
+    dcc.Store(id='login-page-store', data={'mode': 'login'}),
+    
+    html.H1("Login", id='login-page-title', style={'textAlign': 'center',"fontSize": "32px", "color": "rgb(19, 129, 159)", "marginTop": "40px"}),
+    html.Div(id='login-user-info', style={'textAlign': 'center', 'marginBottom': '20px'}),
 
     html.Div([
-        # login fields
         html.Div([
-            dcc.Input(placeholder='Username', type='text', id='username',
-                      style=input_style),
-            dcc.Input(placeholder='Password', type='password', id='password',
-                      style=input_style),
+            dcc.Input(id='login-username', placeholder='Username', type='text', style=input_style),
+            dcc.Input(id='login-password', placeholder='Password', type='password', style=input_style)
         ], id='login-fields', style=field_group_style),
 
-        # registration fields (initially hidden)
         html.Div([
-            dcc.Input(placeholder='Email', type='email', id='email',
-                      style=input_style),
-            dcc.Input(placeholder='Confirm Password', type='password', id='confirm-password',
-                      style={**input_style, 'marginTop': '10px'}),
+            dcc.Input(id='login-email', placeholder='Email', type='email', style=input_style),
+            dcc.Input(id='login-confirm-password', placeholder='Confirm Password', type='password', style={**input_style, 'marginTop': '10px'})
         ], id='signup-fields', style={'display': 'none'}),
 
-        # Buttons
         html.Button('Login', id='login-button', n_clicks=0, style=button_style),
-        html.Button('Sign-in', id='signup-button', n_clicks=0,
-                    style={'display': 'none',}),
-        html.Button('Back to lognin', id='back-to-login', n_clicks=0,
-                    style={'display': 'none'}),
+        html.Button('Sign-in', id='signup-button', n_clicks=0, style={'display': 'none'}),
+        html.Button('Back to login', id='back-to-login', n_clicks=0, style={'display': 'none'})
+    ], id='login-form-container', style=form_card_style),
 
-        html.Div(id='login-output', style={'textAlign': 'center', 'color': 'red', 'marginTop': '10px'}),
-        dcc.Store(id="session", storage_type="session") #
-
-    ], style=form_card_style)
+    html.Div(id='login-output', style={'textAlign': 'center', 'color': 'red', 'marginTop': '10px'})
 ])
 
+
+
+
+# Toggle between login and signup views
 @callback(
-    [Output('signup-fields', 'style'),
-     Output('signup-button', 'style'),
-     Output('back-to-login', 'style'),
-     Output('login-button', 'style'),
-     Output('page-title', 'children'),
-     Output('login-output', 'children', allow_duplicate=True),
-     Output('session', 'data')],#
-    [Input('login-button', 'n_clicks'),
-     Input('back-to-login', 'n_clicks')],
-    [State('username', 'value'),
-     State('password', 'value')],
+    [
+        Output('signup-fields', 'style'),      # Show/hide signup input fields
+        Output('signup-button', 'style'),      # Show/hide signup button
+        Output('back-to-login', 'style'),      # Show/hide "back to login" link
+        Output('login-button', 'style'),       # Show/hide login button
+        Output('login-page-title', 'children'),# Change login page title text
+        Output('login-page-store', 'data')     # Store current mode ('login' or 'signup') in page store
+    ],
+    [
+        Input('back-to-login', 'n_clicks'),    # Triggered when user clicks "back to login"
+        Input('login-page-store', 'data')      # Current stored mode data
+    ],
+    prevent_initial_call='initial_duplicate'
+)
+def toggle_login_signup(back_clicks, store_data):
+    from dash import ctx
+    # If no trigger or user clicked "back to login"
+    if not ctx.triggered or not back_clicks or ctx.triggered[0]['prop_id'] == 'back-to-login.n_clicks':
+        # Switch view to login: hide signup fields/buttons, show login button, update title and mode
+        return (
+            {'display': 'none'},        # Hide signup fields
+            {'display': 'none'},        # Hide signup button
+            {'display': 'none'},        # Hide back-to-login link
+            {**button_style, 'display': 'block'},  # Show login button
+            "Login",                   # Set page title to "Login"
+            {'mode': 'login'}          # Update store mode to 'login'
+        )
+    # If other triggers occur, do nothing (no update)
+    return no_update
+
+
+
+# Check if user session is active and update login form accordingly
+@callback(
+    [
+        Output('login-form-container', 'style'),       # Show/hide login form container
+        Output('login-page-title', 'children', allow_duplicate=True),  # Update page title
+        Output('login-output', 'children', allow_duplicate=True),     # Show login status message
+        Output('login-output', 'style', allow_duplicate=True)         # Style for login status message
+    ],
+    Input('session', 'data'),  # Triggered when session data changes
+    prevent_initial_call='initial_duplicate',
+    allow_duplicate=True
+)
+def check_login_status(session_data):
+    # If session exists and user is logged in
+    if session_data and session_data.get("logged_in", False):
+        username = session_data.get("username", "unknown user")
+        # Hide login form and show welcome message with username
+        return (
+            {'display': 'none'},      # Hide login form
+            "Welcome to GeoAir!",     # Change page title to welcome message
+            f"You are logged in as {username}. Please, logout to switch user.",  # Status message
+            {'color': 'black', 'textAlign': 'center', 'marginTop': '20px', 'fontWeight': 'bold'}  # Styling message
+        )
+    # If not logged in, show login form with default title and no message
+    return (
+        form_card_style,             # Show login form with default style
+        "Login",                    # Page title as "Login"
+        "",                         # No status message
+        no_update                   # Keep previous style for status message
+    )
+
+
+# Handle login action callback
+@callback(
+    [
+        Output('signup-fields', 'style', allow_duplicate=True),  # Show/hide signup fields
+        Output('signup-button', 'style', allow_duplicate=True),  # Show/hide signup button
+        Output('back-to-login', 'style', allow_duplicate=True),  # Show/hide back to login link
+        Output('login-button', 'style', allow_duplicate=True),   # Show/hide login button
+        Output('login-page-title', 'children', allow_duplicate=True),  # Change page title text
+        Output('login-output', 'children', allow_duplicate=True),      # Display login status message
+        Output('login-output', 'style', allow_duplicate=True),         # Style of login status message
+        Output('session', 'data', allow_duplicate=True)                 # Update session data on successful login
+    ],
+    Input('login-button', 'n_clicks'),  # Triggered when login button is clicked
+    [
+        State('login-username', 'value'),  # Current username input
+        State('login-password', 'value'),  # Current password input
+        State('session', 'data')            # Current session data
+    ],
     prevent_initial_call=True,
     allow_duplicate=True
 )
-def handle_login_and_show_signup(login_clicks, back_clicks, username, password):
-    ctx = dash.callback_context # get the context of the triggered input
-    if not ctx.triggered:
-        return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", ""]
-    
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0] # get the ID of the triggered input
-    # If the user clicks "Back to login"
-    if trigger_id == 'back-to-login':
+def handle_login(login_clicks, username, password, session_data):
+    if not login_clicks:
+        return no_update  # Do nothing if login button not clicked
+
+    # Validate username and password presence
+    if not username or not password:
+        # Prompt user to insert credentials if missing
         return (
-            {'display': 'none'},  # signup-fields
-            {**button_style,'display': 'none'},  # signup-button
-            {'display': 'none'},  # back-to-login
-            {**button_style,'display': 'block'}, # login-button
-            "Login",              # page-title
-            "",                   # login-output
+            no_update, no_update, no_update, no_update, no_update,
+            "Insert username and password",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'},
             no_update
         )
-    # If the user clicks "Login" and has entered username and password
-    if trigger_id == 'login-button' and login_clicks > 0:
-        if not username or not password:
-            return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", "Insert username e password"]
-        try:
-            res = requests.post("http://localhost:5000/api/login", json={
-                "username": username,
-                "password": password
-            })
-            if res.status_code == 200:
-                return [{'display': 'none'}] * 3 + [{**button_style,'display': 'block'}] + ["Login", "Login successful!", {"logged_in": True, "username": username}]#
-            elif res.status_code == 403:
-                return [{'display': 'none'}] * 3 + [{**button_style,'display': 'block'}] + ["Login", "Wrong password.",dash.no_update]
-            elif res.status_code == 401:
-                # show sign in fields if the user is not registered
-                return (
-                    {'display': 'block'},  # signup-fields
-                    {**button_style,'display': 'block'},  # sign in-button
-                    {**button_style,'display': 'block'},  # back-to-login
-                    {**button_style, 'display': 'none'},   # login-button
-                    "Registration",       # page-title   
-                    "Username not found. Please register.", # login-output
-                    no_update
-                )
-            else:
-                return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", f"Errore: {res.status_code} - {res.text}",dash.no_update]     
-        except requests.exceptions.RequestException as e:
-            return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", f"Errore di connessione: {str(e)}",dash.no_update]
-    return [{'display': 'none'}] * 3 + [{'display': 'block'}] + ["Login", ""]
 
+    try:
+        # Send POST request to login API with username and password
+        res = requests.post("http://localhost:5001/api/login", json={
+            "username": username,
+            "password": password
+        })
+
+        if res.status_code == 200:
+            # Login successful: hide signup elements, show welcome message, update session
+            logger.info(f"User {username} logged in successfully.")
+            # Update session data with login status and username
+            return (
+                {'display': 'none'}, {'display': 'none'}, {'display': 'none'},
+                {**button_style, 'display': 'block'},
+                f"Welcome, {username}!",
+                "Login successful!",
+                {'color': "#0ea80e", 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'},
+                {"logged_in": True, "username": username}
+            )
+        elif res.status_code == 403:
+            # Wrong password response: show error message
+            logger.warning(f"Failed login attempt for user {username}: wrong password.")
+            return (
+                no_update, no_update, no_update, no_update, no_update,
+                "Wrong password.",
+                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'},
+                no_update
+            )
+        elif res.status_code == 401:
+            # Username not found: show signup fields, prompt registration
+            logger.warning(f"User {username} not found.")
+            return (
+                {'display': 'block'},
+                {**button_style, 'display': 'block'},
+                {**button_style, 'display': 'block'},
+                {'display': 'none'},
+                "Registration",
+                "Username not found. Please register.",
+                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'},
+                no_update
+            )
+        else:
+            # Other error responses: display error status and message
+            logger.error(f"Login failed for user {username}: {res.status_code} - {res.text}")
+            return (
+                no_update, no_update, no_update, no_update, no_update,
+                f"Error: {res.status_code} - {res.text}",
+                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'},
+                no_update
+            )
+    except requests.exceptions.RequestException as e:
+        # Connection or request error: display connection error message
+        logger.error(f"Connection error during login for user {username}: {str(e)}")
+        return (
+            no_update, no_update, no_update, no_update, no_update,
+            f"Connection error: {str(e)}",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'},
+            no_update
+        )
+
+
+# Handle signup action callback
 @callback(
-    Output('login-output', 'children'),
-    Input('signup-button', 'n_clicks'),
-    State('username', 'value'),
-    State('password', 'value'),
-    State('email', 'value'),
-    State('confirm-password', 'value'),
-    prevent_initial_call=True
+    [
+        Output('login-output', 'children', allow_duplicate=True),  # Show signup status message
+        Output('login-output', 'style', allow_duplicate=True)      # Style signup status message
+    ],
+    Input('signup-button', 'n_clicks'),  # Triggered when signup button clicked
+    [
+        State('login-username', 'value'),         # Username input during signup
+        State('login-password', 'value'),         # Password input during signup
+        State('login-email', 'value'),             # Email input during signup
+        State('login-confirm-password', 'value')  # Confirm password input during signup
+    ],
+    prevent_initial_call=True,
+    allow_duplicate=True
 )
 def handle_signin(n_clicks, username, password, email, confirm_password):
-    if n_clicks > 0:
-        # validation of the inputs
-        if not all([username, password, email, confirm_password]):
-            return "Please, fill all the fields."
-        if password != confirm_password:
-            return "The passwords are different."
-        try:
-            res = requests.post("http://localhost:5000/api/signin", json={
-                "username": username,
-                "password": password,
-                "email": email
-            })
-            # check the response status code
-            # 200 or 201 for successful registration   
-            if res.status_code == 200 or res.status_code == 201:
-                return "Registartion completed! Now you can login."
-            else:
-                return f"Error in registration: {res.status_code} - {res.text}"      
-        except requests.exceptions.RequestException as e:
-            return f"Connection error: {str(e)}"
-    return ""
+    if not n_clicks:
+        return no_update  # Do nothing if signup button not clicked
+
+    # Validate that all fields are filled
+    if not all([username, password, email, confirm_password]):
+        return (
+            "Please, fill all the fields.",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+        )
+
+    # Validate password confirmation matches
+    if password != confirm_password:
+        return (
+            "The passwords are different.",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+        )
+
+    try:
+        # Send POST request to signup API with registration data
+        res = requests.post("http://localhost:5001/api/signin", json={
+            "username": username,
+            "password": password,
+            "email": email
+        })
+
+        if res.status_code in (200, 201):
+            logger.info(f"User {username} registered successfully.")
+            # Successful registration: notify user they can login now
+            return (
+                "Registration completed! Now you can login.",
+                {'color': '#0ea80e', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+            )
+        else:
+            logger.error(f"Registration failed for user {username}: {res.status_code} - {res.text}")
+            # Registration error: display error message from server
+            return (
+                f"Error in registration: {res.status_code} - {res.text}",
+                {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+            )
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection error during signup for user {username}: {str(e)}")
+        # Connection error during signup: show error message
+        return (
+            f"Connection error: {str(e)}",
+            {'color': 'red', 'textAlign': 'center', 'marginTop': '10px', 'fontWeight': 'bold'}
+        )

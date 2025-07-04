@@ -3,7 +3,6 @@ from dash import html, dcc, Output, Input, callback, no_update
 import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
-import psycopg2
 from datetime import datetime, timedelta
 from components.fetch_pollutant import fetch_pollutant
 import numpy as np
@@ -17,13 +16,15 @@ dash.register_page(__name__, path="/trend", name="Trends")
 
 
 
-# Fetch initial data for dropdowns
+# Fetch initial data for dropdown menus
 df_all = fetch_pollutant()
+# Get sorted list of unique pollutant types if data is available
 pollutants = sorted(df_all["nometiposensore"].dropna().unique()) if not df_all.empty else []
+# Get sorted list of unique stations if data is available
 stations = sorted(df_all["nomestazione"].dropna().unique()) if not df_all.empty else []
 
 def get_idsensore(df, nometiposensore=None, nomestazione=None):
-    # print("DataFrame:", df.columns.tolist())  # check columns in the DataFrame
+    # Filter the dataframe based on pollutant type and/or station name if provided
     filtered_df = df
 
     if nometiposensore is not None:
@@ -32,180 +33,172 @@ def get_idsensore(df, nometiposensore=None, nomestazione=None):
     if nomestazione is not None:
         filtered_df = filtered_df[filtered_df['nomestazione'] == nomestazione]
 
-    # obtain unique idsensore values
+    # Return list of unique sensor IDs after filtering
     idsensori = filtered_df['idsensore'].unique()
 
     return idsensori.tolist()
 
 
-def fetch_sensor_data_api(idsensore=None, datainizio=None, datafine=None):
+def fetch_sensor_data_api(idsensore=None):
     """
-    Fetch sensor data from the /api/measurements endpoint,
-    returning a DataFrame with columns similar to the sample fetch_sensor_data function.
+    Fetch sensor measurement data from the API endpoint,
+    returning a DataFrame with relevant columns.
     """
-
     try:
-        url = "http://localhost:5000/api/measurements"
+        url = "http://localhost:5001/api/measurements"
         params = {}
 
+        # Add parameters if provided for sensor ID and date range
         if idsensore:
             params['idsensore'] = idsensore
-        if datainizio:
-            params['datainizio'] = datainizio
-        if datafine:
-            params['datafine'] = datafine
 
+        # Call the API and check response status
         response = requests.get(url, params=params)
         response.raise_for_status()
 
         data = response.json()
 
+        # Return empty DataFrame if no data
         if not data:
             return pd.DataFrame()
 
-        # build DataFrame
+        # Create DataFrame from JSON data
         df = pd.DataFrame(data)
 
+        # Assign pollutant type column based on sensor ID (fallback)
         df['nometiposensore'] = df.get('idsensore', None)
 
-        ### check what appened if nomestazione as no pollutant related value 
+        # Ensure 'nomestazione' column exists
         if 'nomestazione' not in df.columns:
             df['nomestazione'] = None
 
-        # order by 'data' if it exists
+        # Convert 'data' column to datetime and sort if exists
         if 'data' in df.columns:
             df['data'] = pd.to_datetime(df['data'])
             df = df.sort_values('data')
 
         logger.info("Sensor data fetched successfully")
 
+        # Return selected columns
         return df[['data', 'valore', 'nomestazione', 'nometiposensore', 'stato']]
 
     except Exception as e:
-        print(f"Error fetching sensor data from API: {e}")
+        logger.error(f"Error fetching sensor data from API: {e}")
         return pd.DataFrame()
 
 
-# Get provinces for NOx analysis
+# Get list of provinces from API for analysis
 def get_provinces():
     try:
-        response = requests.get("http://localhost:5000/api/provinces")
-        response.raise_for_status()  # check for HTTP errors
+        response = requests.get("http://localhost:5001/api/provinces")
+        response.raise_for_status()  # Raise error for bad HTTP responses
         data = response.json()
         
-        # transform the list of provinces into a DataFrame
+        # Convert list to DataFrame
         df = pd.DataFrame(data, columns=["provincia"])
         
         logger.info("Provinces fetched successfully")
-        # Rimuove eventuali NaN e ritorna la lista
+        # Return cleaned list of provinces without NaNs
         return df["provincia"].dropna().tolist()
     
     except requests.RequestException as e:
-        print(f"Errore chiamata API: {e}")
+        logger.error(f"API Error: {e}")
         return []
     except Exception as e:
-        print(f"Errore imprevisto: {e}")
+        logger.error(f"Unexpected error: {e}")
         return []
 
 
-# Fetch NOx data from the API       
-def fetch_nox_data(pollutant, province=None, time_period="full", datainizio=None, datafine=None):
-    """Fetch NOx data calling the API measurements_by_province"""
+# Fetch measurements data filtered by pollutant and optionally province and date range
+def fetch_data(pollutant, province=None, start_date=None, end_date=None):
+    """Fetch data calling the API endpoint for measurements filters"""
 
-    if pollutant == "NO":
-        pollutant = "Monossido di Azoto"
-    elif pollutant == "NO2":
-        pollutant = "Biossido di Azoto"
-
-    # build the query parameters
+    # Prepare query parameters for API call
     params = {
         "pollutant": pollutant,
     }
     if province:
         params["provincia"] = province
-    if datainizio:
-        params["datainizio"] = datainizio
-    if datafine:
-        params["datafine"] = datafine
+    if start_date:
+        params["start_date"] = start_date
+    if end_date:
+        params["end_date"] = end_date
 
     try:
-        url = "http://localhost:5000/api/measurements_by_province"
+        url = "http://localhost:5001/api/measurements_filters"
 
+        # Make GET request and check for errors
         response = requests.get(url, params=params)
         response.raise_for_status()  
 
         data = response.json()
 
+        # Handle empty response
         if not data:
-            print('No data found for the specified filters.')
+            logger.warning(f"NO DATA found for pollutant: '{pollutant}', province: '{province}', start_date: '{start_date}', end_date: '{end_date}' ")
             return pd.DataFrame()
 
-        # DataFrame
+        # Convert to DataFrame and clean data
         df = pd.DataFrame(data)
-
         df["data"] = pd.to_datetime(df["data"])
         df["valore"] = pd.to_numeric(df["valore"], errors="coerce")
         df = df.dropna()
         df.sort_values("data", inplace=True)
+        # Calculate 7-day rolling average for smoothing
         df["smoothed"] = df["valore"].rolling(window=7, min_periods=1).mean()
 
-        # Filter time_period
-        if time_period == "first":
-            df = df[df["data"].dt.month <= 6]
-        elif time_period == "second":
-            df = df[df["data"].dt.month > 6]
-
-        logger.info(f"Data fetched successfully -> pollutant: '{pollutant}', province: '{province}' ")
+        logger.info(f"Fetched successfully -> pollutant: '{pollutant}', province: '{province}', start_date: '{start_date}', end_date: '{end_date}'  ")
 
         return df
 
     except requests.RequestException as e:
-        print(f"Errore nella chiamata API: {e}")
+        logger.error(f"API call error: {e}")
         return pd.DataFrame()
     except Exception as e:
-        print(f"Errore imprevisto: {e}")
+        logger.error(f"Unexpected error: {e}")
         return pd.DataFrame()
 
 
+# Fetch data for multiple pollutants combined into a single DataFrame
+def fetch_data_multiple(pollutants, province, start_date=None, end_date=None):
+    df_list = []
+    for pol in pollutants:
+        df = fetch_data(pol, province, start_date, end_date)
+        df["pollutant"] = pol
+        df_list.append(df)
+    # Concatenate all dataframes if any, else return empty
+    return pd.concat(df_list, ignore_index=True) if df_list else pd.DataFrame()
 
 
-# Pollutant categories 
-# NOx categories
-def get_nox_categories():
-    return ["NO", "NO2", "Ossidi di Azoto"]
-
-# Time period options
-def get_time_period_options():
-    return [
-        {"label": "First Half Year (Jan-Jun)", "value": "first"},
-        {"label": "Second Half Year (Jul-Dec)", "value": "second"},
-        {"label": "Full Year", "value": "full"}
-    ]
-
-# Data smoothing options
+# Options for data smoothing methods for visualization
 def get_smoothing_options():
     return [
-        {"label": "Raw Data", "value": "raw"},
-        {"label": "7-day Average", "value": "smoothed"}
+        {"label": "Daily average", "value": "raw"},
+        {"label": "7-day average", "value": "smoothed_7"},
+        {"label": "14-day average", "value": "smoothed_14"}
     ]
 
+
+# Create a line chart for a single pollutant in a province with optional smoothing
 def create_nox_chart(df, pollutant, province, smoothing="raw"):
     """Create NOx analysis chart"""
     if df.empty:
+        # Return placeholder figure if no data
         fig = go.Figure()
         fig.add_annotation(
-            text="No NOx data available for the selected filters",
+            text="No data available for the selected filters",
             xref="paper", yref="paper",
             x=0.5, y=0.5, xanchor='center', yanchor='middle',
             showarrow=False,
             font=dict(size=16, color="gray")
         )
         fig.update_layout(
-            title="No NOx Data Available",
+            title="No Data Available",
             height=400
         )
         return fig
     
+    # Select data column based on smoothing choice
     y_data = df["valore"] if smoothing == "raw" else df["smoothed"]
     
     fig = go.Figure()
@@ -218,6 +211,7 @@ def create_nox_chart(df, pollutant, province, smoothing="raw"):
         name=f"{pollutant} ({province})"
     ))
     
+    # Set layout properties for better visualization
     fig.update_layout(
         title=f"{pollutant} Concentration in {province} - 2024",
         xaxis_title="Date",
@@ -231,10 +225,61 @@ def create_nox_chart(df, pollutant, province, smoothing="raw"):
     return fig
 
 
+# Create line chart for multiple pollutants in a province with smoothing options
+def create_nox_chart_multi(df, smoothing="raw", province=None):
+    if df.empty:
+        # Placeholder figure when no data available
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available for the selected filters",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False,
+            font=dict(size=16, color="gray")
+        )
+        fig.update_layout(
+            title="No Data Available",
+            height=400
+        )
+        return fig
 
+    # Add a column selecting raw or smoothed values for y-axis
+    df["y"] = df["valore"] if smoothing == "raw" else df["smoothed"]
+
+    fig = go.Figure()
+
+    # Add a separate trace for each pollutant
+    for pollutant in df["pollutant"].unique():
+        sub_df = df[df["pollutant"] == pollutant]
+
+        fig.add_trace(go.Scatter(
+            x=sub_df["data"],
+            y=sub_df["y"],
+            mode="lines+markers",
+            name=pollutant,
+            line=dict(width=2),
+            marker=dict(size=4),
+            hovertemplate = "<b>%{x|%Y-%m-%d}</b><br>" + f"{pollutant}: %{{y:.2f}} μg/m³<extra></extra>"
+        ))
+
+    fig.update_layout(
+        title=f"Pollutants in {'All Provinces' if not province else province}",
+        xaxis_title="Date",
+        yaxis_title="Concentration (μg/m³)",
+        template="plotly_white",
+        hovermode="x unified",
+        height=500,
+        margin=dict(l=50, r=50, t=80, b=50)
+    )
+
+    return fig
+
+
+# Create a time series trend chart for a specific pollutant at a station
 def create_trend_chart(df, pollutant, station):
     """Create a time series chart for the selected data"""
     if df.empty:
+        # Show placeholder figure when no data
         fig = go.Figure()
         fig.add_annotation(
             text="No data available for the selected filters",
@@ -251,6 +296,7 @@ def create_trend_chart(df, pollutant, station):
         )
         return fig
 
+    # Use Plotly Express for quick line plot creation
     fig = px.line(
         df, 
         x='data', 
@@ -262,6 +308,7 @@ def create_trend_chart(df, pollutant, station):
         }
     )
     
+    # Customize layout for clarity and style
     fig.update_layout(
         title=dict(
             text=f"{pollutant} Trends - {station}",
@@ -284,6 +331,7 @@ def create_trend_chart(df, pollutant, station):
         margin=dict(l=50, r=50, t=80, b=50)
     )
     
+    # Style line and hover tooltip
     fig.update_traces(
         line=dict(color="rgb(19, 129, 159)", width=2),
         hovertemplate="<b>%{x}</b><br>" +
@@ -292,6 +340,7 @@ def create_trend_chart(df, pollutant, station):
     )
     
     return fig
+
 
 
 
@@ -373,19 +422,70 @@ def create_summary_cards(df, pollutant):
     
     return cards
 
-# Layout
+
+def create_summary_cards_per_pollutant(df, pollutants):
+    """Create summary cards for multiple pollutants"""
+    if df.empty:
+        return html.Div("No data available", style={"textAlign": "center", "color": "gray"})
+
+    cards = []
+
+    # Se è stringa singola, converti in lista
+    if isinstance(pollutants, str):
+        pollutants = [pollutants]
+
+    for pollutant in pollutants:
+        sub_df = df[df["pollutant"] == pollutant]
+        if sub_df.empty:
+            continue
+
+        avg_value = sub_df["valore"].mean()
+        max_value = sub_df["valore"].max()
+        min_value = sub_df["valore"].min()
+        data_points = len(sub_df)
+
+        cards.append(html.Div([
+            html.H4(pollutant, style={"margin": "0", "color": "#2c3e50"}),
+            html.P(f"Average: {avg_value:.1f} μg/m³", style={"margin": "4px 0", "color": "rgb(19, 129, 159)"}),
+            html.P(f"Max: {max_value:.1f} μg/m³", style={"margin": "4px 0", "color": "rgb(231, 76, 60)"}),
+            html.P(f"Min: {min_value:.1f} μg/m³", style={"margin": "4px 0", "color": "rgb(46, 204, 113)"}),
+            html.P(f"Data Points: {data_points}", style={"margin": "4px 0", "color": "#7f8c8d", "fontSize": "13px"})
+        ], style={
+            "backgroundColor": "white",
+            "padding": "15px",
+            "borderRadius": "10px",
+            "boxShadow": "0 2px 8px rgba(0,0,0,0.1)",
+            "textAlign": "center",
+            "minWidth": "180px",
+            "flex": "1",
+            "margin": "10px"
+        }))
+
+    return html.Div(cards, style={
+        "display": "flex",
+        "flexWrap": "wrap",
+        "justifyContent": "center",
+        "gap": "10px",
+        "margin": "20px 0"
+    })
+
+
+
+
+
+
+### LAYOUT -> TRENDS PAGE ###
 layout = html.Div([
-    dcc.Store(id="session", storage_type="session"),
     html.Div(id="redirect-trend"),
     # Page Header
     html.Div([
-        html.H1("📈 Air Quality Trends Analysis", style={
+        html.H1("Air Quality Trends Analysis", style={
             "textAlign": "center",
             "color": "rgb(19, 129, 159)",
             "marginBottom": "10px",
             "fontSize": "32px"
         }),
-        html.P("Analyze temporal patterns in air quality measurements with specialized NOx analysis", style={
+        html.P("Analyze temporal patterns for each station in Lombardy region or compare the different pollutant with the specialized analysis", style={
             "textAlign": "center",
             "color": "#7f8c8d",
             "fontSize": "16px",
@@ -395,12 +495,12 @@ layout = html.Div([
     
     # Analysis Mode Selector
     html.Div([
-        html.H3("🔬 Select Analysis Mode", style={"color": "#2c3e50", "marginBottom": "15px"}),
+        html.H3("Select Analysis Mode", style={"color": "#2c3e50", "marginBottom": "15px"}),
         dcc.RadioItems(
             id="analysis-mode",
             options=[
                 {"label": " General Pollutant Analysis", "value": "general"},
-                {"label": " NOx Specialized Analysis", "value": "nox"}
+                {"label": " Specialized Analysis", "value": "nox"}
             ],
             value="general",
             style={"fontSize": "16px"},
@@ -418,7 +518,7 @@ layout = html.Div([
     html.Div(id="general-controls", children=[
         html.Div([
             html.Div([
-                html.Label("🔬 Select Pollutant:", style={
+                html.Label("Select Pollutant:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -434,7 +534,7 @@ layout = html.Div([
             ], style={"flex": "1", "marginRight": "20px"}),
             
             html.Div([
-                html.Label("🏭 Select Station:", style={
+                html.Label("Select Station:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
@@ -457,68 +557,75 @@ layout = html.Div([
         "margin": "0 20px 20px 20px"
     }),
     
-    # NOx Analysis Controls
+    # Specialized Analysis Controls
     html.Div(id="nox-controls", children=[
         html.Div([
+
             html.Div([
-                html.Label("🏢 Select Province:", style={
+                html.Label("Select Pollutants:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
                     "color": "#2c3e50"
                 }),
                 dcc.Dropdown(
-                    id="nox-province-selector",
-                    options=[{"label": p, "value": p} for p in get_provinces()],
-                    value="Milano",
+                    id="specialized-pollutant-selector",
+                    options=[{"label": pol, "value": pol} for pol in pollutants],
+                    value=[],         # default list
+                    multi=True,            # consente selezione multipla
+                    clearable=False
+                )
+            ], style={"flex": "2", "marginRight": "15px"}),
+
+            html.Div([
+                html.Label("Select Province:", style={
+                    "fontWeight": "bold",
+                    "marginBottom": "8px",
+                    "display": "block",
+                    "color": "#2c3e50"
+                }),
+                dcc.Dropdown(
+                    id="specialized-province-selector",
+                    options=[{"label": "All", "value": "All"}] + [{"label": p, "value": p} for p in get_provinces()],
+                    value="All",  # default value
                     clearable=False
                 )
             ], style={"flex": "1", "marginRight": "15px"}),
             
-            html.Div([
-                html.Label("🧪 NOx Category:", style={
-                    "fontWeight": "bold",
-                    "marginBottom": "8px",
-                    "display": "block",
-                    "color": "#2c3e50"
-                }),
-                dcc.Dropdown(
-                    id="nox-pollutant-selector",
-                    options=[{"label": p, "value": p} for p in get_nox_categories()],
-                    value="NO2",
-                    clearable=False
-                )
-            ], style={"flex": "1", "marginRight": "15px"}),
             
             html.Div([
-                html.Label("📅 Time Period:", style={
+                html.Label("Data Smoothing:", style={
                     "fontWeight": "bold",
                     "marginBottom": "8px",
                     "display": "block",
                     "color": "#2c3e50"
                 }),
                 dcc.Dropdown(
-                    id="nox-time-period",
-                    options=get_time_period_options(),
-                    value="full",
-                    clearable=False
-                )
-            ], style={"flex": "1", "marginRight": "15px"}),
-            
-            html.Div([
-                html.Label("📊 Data Smoothing:", style={
-                    "fontWeight": "bold",
-                    "marginBottom": "8px",
-                    "display": "block",
-                    "color": "#2c3e50"
-                }),
-                dcc.Dropdown(
-                    id="nox-smoothing",
+                    id="specialized-smoothing",
                     options=get_smoothing_options(),
                     value="raw",
                     clearable=False
                 )
-            ], style={"flex": "1"})
+            ], style={"flex": "1", "marginRight": "15px"}),
+
+            html.Div([
+                html.Label("Date Range:", style={
+                    "fontWeight": "bold",
+                    "marginBottom": "8px",
+                    "display": "block",
+                    "color": "#2c3e50"
+                }),
+                dcc.DatePickerRange(
+                    id="nox-date-range",
+                    min_date_allowed=datetime(2020, 1, 1),
+                    max_date_allowed=datetime(2025, 12, 31),
+                    start_date=datetime(2024, 12, 1),
+                    end_date=datetime(2024, 12, 31),
+                    display_format="DD/MM/YYYY",
+                    style={"width": "100%"}
+                )
+            ], style={"flex": "1.5", "marginRight": "15px"}),
+
         ], style={"display": "flex"})
     ], style={
         "backgroundColor": "white",
@@ -552,20 +659,15 @@ layout = html.Div([
     }),
     
     # Footer Info
-    html.Div([
-        html.P("💡 Tip: Switch between General and NOx analysis modes to explore different aspects of air quality data.", style={
-            "textAlign": "center",
-            "color": "#95a5a6",
-            "fontSize": "14px",
-            "fontStyle": "italic",
-            "margin": "20px"
-        })
-    ])
 ], style={
     "maxWidth": "1200px",
     "margin": "auto",
     "padding": "20px 0"
 })
+
+
+
+
 
 # Callback to show/hide controls based on analysis mode
 @callback(
@@ -593,91 +695,138 @@ def update_station_options(selected_pollutant):
     """Update available stations based on selected pollutant"""
     if not selected_pollutant:
         return []
+
+    # Fetch data already filtered by pollutant
+    df_filtered = fetch_pollutant(pollutant=selected_pollutant)
     
-    # Filter stations that have the selected pollutant
-    df_filtered = df_all[df_all["nometiposensore"] == selected_pollutant]
+    # Extract unique station names
     available_stations = sorted(df_filtered["nomestazione"].dropna().unique())
-    
+
     return [{"label": station, "value": station} for station in available_stations]
+
+
+
 
 # Main callback to update chart and summary
 @callback(
-    [Output("trend-chart", "figure"),
-     Output("summary-cards", "children"),
-     Output("redirect-trend", "children")],
-    [Input("analysis-mode", "value"),
-     Input("trend-pollutant-selector", "value"),
-     Input("trend-station-selector", "value"),
-     Input("nox-province-selector", "value"),
-     Input("nox-pollutant-selector", "value"),
-     Input("nox-time-period", "value"),
-     Input("nox-smoothing", "value"),
-     Input("session", "data")]
+    [
+        Output("trend-chart", "figure"),
+        Output("summary-cards", "children"),
+        Output("redirect-trend", "children")
+    ],
+    [
+        Input("analysis-mode", "value"),
+        Input("trend-pollutant-selector", "value"),
+        Input("trend-station-selector", "value"),
+        Input("specialized-province-selector", "value"),
+        Input("specialized-pollutant-selector", "value"),
+        Input("nox-date-range", "start_date"),
+        Input("nox-date-range", "end_date"),
+        Input("specialized-smoothing", "value"),
+        Input("session", "data")
+    ]
 )
-def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, time_period, smoothing, session_data):
-    """Update the chart and summary based on selected analysis mode and parameters"""
+def update_chart_and_summary(mode, pollutant, station, province, nox_pollutant, start_date, end_date, smoothing, session_data):
+    """
+    Update the chart and summary based on the selected analysis mode and parameters.
+    Handles user authentication, input validation, data fetching, and visualization.
+    """
+    # Convert start_date and end_date to datetime objects if provided
+    if start_date:
+        start_date = datetime.fromisoformat(start_date)
+    if end_date:
+        end_date = datetime.fromisoformat(end_date)
+
+    # Check if user is logged in; if not, redirect to login page
     if not session_data or not session_data.get("logged_in"):
         fig = go.Figure()
         fig.add_annotation(
             text="Redirecting to login...",
             xref="paper", yref="paper",
-            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            x=0.5, y=0.5,
+            xanchor='center', yanchor='middle',
             showarrow=False,
             font=dict(size=16, color="gray")
         )
         fig.update_layout(height=300)
         return fig, "", dcc.Location(href="/login", id="redirect-now")
+
+    # === GENERAL ANALYSIS MODE ===
+    if mode == "general":
+        # Validate that both pollutant and station are selected
+        if not pollutant or not station:
+            empty_fig = go.Figure()
+            empty_fig.add_annotation(
+                text="Please select both pollutant and station",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5,
+                xanchor='center', yanchor='middle',
+                showarrow=False,
+                font=dict(size=16, color="gray")
+            )
+            empty_fig.update_layout(
+                title="Select Filters",
+                height=400,
+                xaxis=dict(showgrid=False, showticklabels=False),
+                yaxis=dict(showgrid=False, showticklabels=False)
+            )
+            empty_summary = html.Div(
+                "Select pollutant and station to view summary",
+                style={"textAlign": "center", "color": "gray", "padding": "20px"}
+            )
+            return empty_fig, empty_summary, no_update
+
+        # Fetch sensor IDs for the selected pollutant and station
+        id_sensore = get_idsensore(df_all, pollutant, station)
+        # Fetch sensor data from API for these sensor IDs
+        df_sensor = fetch_sensor_data_api(id_sensore)
+
+        # Create time series chart and summary cards for the selected pollutant and station
+        fig = create_trend_chart(df_sensor, pollutant, station)
+        summary = create_summary_cards(df_sensor, pollutant)
+
+    # === SPECIALIZED ANALYSIS MODE ===
     else:
-        if mode == "general":
-            # General pollutant analysis
-            if not pollutant or not station:
-                empty_fig = go.Figure()
-                empty_fig.add_annotation(
-                    text="Please select both pollutant and station",
-                    xref="paper", yref="paper",
-                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
-                    showarrow=False,
-                    font=dict(size=16, color="gray")
-                )
-                empty_fig.update_layout(
-                    title="Select Filters",
-                    height=400,
-                    xaxis=dict(showgrid=False, showticklabels=False),
-                    yaxis=dict(showgrid=False, showticklabels=False)
-                )
-                empty_summary = html.Div("Select pollutant and station to view summary", 
-                                    style={"textAlign": "center", "color": "gray", "padding": "20px"})
-                return empty_fig, empty_summary, no_update
-            
-            # Fetch sensor data for the selected combination
-            # df_sensor = fetch_sensor_data(pollutant, station)          # old
-            id_sensore = get_idsensore(df_all, pollutant, station)
-            df_sensor = fetch_sensor_data_api(id_sensore)
-            
-            # Create chart and summary
-            fig = create_trend_chart(df_sensor, pollutant, station)
-            summary = create_summary_cards(df_sensor, pollutant)
-            
-        else:
-            # NOx specialized analysis
-            # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, {time_period}, smoothing: {smoothing} \n\n")
-            df_nox = fetch_nox_data(nox_pollutant, province, time_period)
-            fig = create_nox_chart(df_nox, nox_pollutant, province, smoothing)
-            summary = create_summary_cards(df_nox, nox_pollutant)
+        # Ensure nox_pollutant is a list
+        if not isinstance(nox_pollutant, list):
+            nox_pollutant = [nox_pollutant]
+
+        # Handle 'All' province selection as None (no filter)
+        if province == "All":
+            province = None
+
+        # Fetch data for multiple pollutants with date range filtering
+        df_nox = fetch_data_multiple(nox_pollutant, province, start_date=start_date, end_date=end_date)
         
-        return fig, summary, no_update
+        # print(f"--> Fetching NOx data for {province}, {nox_pollutant}, smoothing: {smoothing} \n\n")
 
+        # Handle case where no data is returned or expected column missing
+        if df_nox.empty or "valore" not in df_nox.columns:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="No data available for the selected filters",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5,
+                showarrow=False,
+                font=dict(size=16, color="gray")
+            )
+            fig.update_layout(height=300)
+            summary = html.Div(
+                "No data available for the selected filters",
+                style={"textAlign": "center", "color": "gray", "padding": "20px"}
+            )
+            return fig, summary, no_update
 
+        # Apply smoothing based on user selection
+        if smoothing == "smoothed_7":
+            df_nox["smoothed"] = df_nox.groupby("pollutant")["valore"].transform(lambda x: x.rolling(7, min_periods=1).mean())
+        elif smoothing == "smoothed_14":
+            df_nox["smoothed"] = df_nox.groupby("pollutant")["valore"].transform(lambda x: x.rolling(14, min_periods=2).mean())
+        else:
+            df_nox["smoothed"] = df_nox["valore"]
 
+        # Create multi-pollutant NOx chart and summary cards
+        fig = create_nox_chart_multi(df_nox, smoothing=smoothing, province=province)
+        summary = create_summary_cards_per_pollutant(df_nox, nox_pollutant)
 
-
-
-
-
-
-
-
-
-
-
-
+    return fig, summary, no_update
