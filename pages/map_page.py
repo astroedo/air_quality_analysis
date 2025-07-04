@@ -30,8 +30,8 @@ layout = html.Div([
     dcc.Store(id="session", storage_type="session"),
     html.Div(id="redirect-map"),
     # Header of the page
-    html.H2("Air Quality Map", style={"textAlign": "center"}),
-    html.H3("Average Pollutant Levels by Province", style={"textAlign": "center", "marginBottom": "20px"}),
+    html.H1("Air Quality Map", style={ "textAlign": "center", "color": "rgb(19, 129, 159)", "marginBottom": "10px", "fontSize": "32px" }),
+    html.H2("Average Pollutant Levels by Province", style={"textAlign": "center", "marginBottom": "20px"}),
     html.Div(id='graph-output', style={'textAlign': 'center', 'marginTop': '10px', 'marginBottom': '50px', 'color': 'red', 'fontWeight': 'bold'}),
     html.Div([  
         html.Div([  # map container
