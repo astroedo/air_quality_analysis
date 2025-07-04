@@ -29,7 +29,7 @@ app.layout = html.Div([
                     }
                 ),
                 html.Span(
-                    "GeoAir - Air Quality Analysis",
+                    "GeoAir",
                     style={
                         "fontSize": "24px",
                         "fontWeight": "bold",

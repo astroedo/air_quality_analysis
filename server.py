@@ -3,12 +3,16 @@ import psycopg2
 import pandas as pd
 import warnings
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 # Filtro selettivo per il warning di pandas su psycopg2
 warnings.filterwarnings(
     "ignore",
     category=UserWarning,
     message="pandas only supports SQLAlchemy connectable*"
 )
+
+
 
 app = Flask(__name__)
 
@@ -35,66 +39,74 @@ def check_user_exists(username):
 @app.route('/api/login', methods=['POST'])
 def login():
     conn = db_connection()
-    # query to retrieve user data
-    sql_query = "SELECT * FROM users;"
-    df_user = pd.read_sql_query(sql_query, conn)
-    print('Dataframe:')
-    print(df_user.head(), '\n') 
-
-    #global df_user
-    global logged_in
-    logged_in = False
     data = request.get_json()
-    username = data.get('username')
+    username_or_email = data.get('username')
     password = data.get('password')
 
-    # if the username or password is empty
-    if not username or not password:
+    if not username_or_email or not password:
         return jsonify({"message": "Username and password are required"}), 400
-    # if the username or email is incorrect
-    elif username not in df_user['username'].values and username not in df_user['email'].values:
-            return jsonify({"message": "Invalid username"}), 401
-    # if the username is correct
-    elif username in df_user['username'].values or username in df_user['email'].values:
-        # check if the password is correct
-        match = df_user[df_user['username'] == username]
-        pw = match['password'].values[0]
-        # if the password is incorrect
-        if  pw != password:
-            return jsonify({"message": "Invalid password"}), 403
-        # if the password is correct
-        else: 
-            logged_in = True
-            return jsonify({"message": "Login successful"}), 200
-    else: 
-        return jsonify({"message": "ERROR"}),500
 
-# Signin
+    cursor = conn.cursor()
+    query = "SELECT username, email, password FROM users WHERE username = %s OR email = %s"
+    cursor.execute(query, (username_or_email, username_or_email))
+    user = cursor.fetchone()
+    cursor.close()
+
+    if not user:
+        # Username/email not found
+        return jsonify({"message": "Invalid username"}), 401
+
+    stored_password = user[2]
+
+
+    # Password verification in plain text
+    if stored_password != password:
+        return jsonify({"message": "Invalid password"}), 403
+    
+    # Password verification using hash (commented out)
+    # if not check_password_hash(stored_password, password):
+    #     return jsonify({"message": "Invalid password"}), 403
+
+
+    return jsonify({"message": "Login successful"}), 200
+
+
 @app.route('/api/signin', methods=['POST'])
 def signin():
-    global logged_in
     conn = db_connection()
-    new_data = request.get_json()
-    username = new_data.get('username')
-    email = new_data.get('email')
-    password = new_data.get('password')
-    # if the username or password or email is empty
-    if not username or not password or not email:
-        return jsonify({"message": "All fields are necessary to be registered"}), 400
-    # if the username or email is already taken
-    elif check_user_exists(username) == 1:
-        return jsonify({"message": "Username already exists"}), 409
-    else: 
-        try:  
-            cursor = conn.cursor()
-            query = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
-            cursor.execute(query, (username, email, password))
-            conn.commit()
-            logged_in = True
-            return jsonify({"message": "Signin successful"}), 200
-        except Exception as e:
-            return jsonify({"message": f"Internal server error: {str(e)}"}), 500
-        
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not username or not email or not password:
+        return jsonify({"message": "All fields are required"}), 400
+
+    cursor = conn.cursor()
+    query = "SELECT 1 FROM users WHERE username = %s OR email = %s"
+    cursor.execute(query, (username, email))
+    if cursor.fetchone():
+        cursor.close()
+        return jsonify({"message": "Username or email already exists"}), 409
+
+
+    # Store password in plain text
+    query = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
+    cursor.execute(query, (username, email, password))
+
+    # Password hashing for storage (commented out)
+    # hashed_password = generate_password_hash(password)
+    # query = "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)"
+    # cursor.execute(query, (username, email, hashed_password))
+
+
+    conn.commit()
+    cursor.close()
+
+    return jsonify({"message": "Signup successful"}), 200
+
+
+
     
 @app.route('/api/provinces', methods=['GET'])
 def get_provinces():
@@ -148,8 +160,6 @@ def get_stations():
 @app.route('/api/measurements', methods=['GET'])
 def get_measurements():
     idsensore = request.args.get('idsensore', default=None, type=str)
-    datainizio = request.args.get('datainizio', default=None, type=str)
-    datafine = request.args.get('datafine', default=None, type=str)
 
     try:
         conn = db_connection()
@@ -160,14 +170,6 @@ def get_measurements():
         if idsensore:
             base_query += " AND idsensore = %s"
             params.append(idsensore)
-
-        if datainizio:
-            base_query += " AND data >= %s"
-            params.append(datainizio)
-
-        if datafine:
-            base_query += " AND data <= %s"
-            params.append(datafine)
 
         base_query += " ORDER BY data ASC"
 
@@ -182,100 +184,68 @@ def get_measurements():
 
 
 
-@app.route('/api/measurements2', methods=['GET'])
-def api_get_measurements():
-    pollutant_group = request.args.get('pollutant_group', type=str)
-    province = request.args.get('province', type=str)
+@app.route('/api/measurements_filters', methods=['GET'])
+def get_measurements_filters():
+    # Get query parameters from URL
+    provincia = request.args.get('provincia', type=str)
+    pollutant = request.args.get('pollutant', type=str)
     start_date = request.args.get('start_date', type=str)
     end_date = request.args.get('end_date', type=str)
 
-    try:
-        conn = db_connection()
-        query = """
-            SELECT m.valore, s.nometiposensore, s.provincia, s.nomestazione, m.data
-            FROM measurement m
-            JOIN station s ON m.idsensore = s.idsensore
-            WHERE m.valore IS NOT NULL AND s.lat IS NOT NULL AND s.lng IS NOT NULL
-        """
-        params = []
-
-        if pollutant_group and pollutant_group != "All":
-            if pollutant_group == "PM":
-                query += " AND (s.nometiposensore LIKE 'PM%')"
-            elif pollutant_group == "NOx":
-                query += " AND (s.nometiposensore IN ('NO', 'NO2', 'NOx'))"
-            elif pollutant_group == "Ozone":
-                query += " AND s.nometiposensore = 'O3'"
-            else:
-                query += " AND s.nometiposensore = %s"
-                params.append(pollutant_group)
-
-        if province and province != "All":
-            query += " AND s.provincia = %s"
-            params.append(province)
-
-        if start_date:
-            query += " AND m.data >= %s"
-            params.append(start_date)
-
-        if end_date:
-            query += " AND m.data <= %s"
-            params.append(end_date)
-
-        query += " ORDER BY m.data DESC LIMIT 10000"
-
-        df = pd.read_sql_query(query, conn, params=params)
-        conn.close()
-
-        data = df.to_dict(orient='records')
-        return jsonify(data)
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-
-@app.route('/api/measurements_by_province', methods=['GET'])
-def get_measurements_by_province():
-    provincia = request.args.get('provincia', type=str)
-    pollutant = request.args.get('pollutant', type=str)
-    datainizio = request.args.get('datainizio', type=str)
-    datafine = request.args.get('datafine', type=str)
 
     try:
         conn = db_connection()
         params = []
-        
-        base_query = """
-            SELECT m.data, AVG(m.valore) AS valore, s.provincia
+
+        # Build SELECT and GROUP BY clauses dynamically depending on presence of 'provincia'
+        if provincia:
+            # Include province in SELECT and group by it
+            select_clause = "SELECT m.data, AVG(m.valore) AS valore, s.provincia"
+            group_by_clause = "GROUP BY m.data, s.provincia"
+        else:
+            # Exclude province if not specified in input
+            select_clause = "SELECT m.data, AVG(m.valore) AS valore"
+            group_by_clause = "GROUP BY m.data"
+
+        # Base SQL query with JOIN between measurement and station
+        base_query = f"""
+            {select_clause}
             FROM measurement m
             JOIN station s ON m.idsensore = s.idsensore
             WHERE m.stato = 'VA'
         """
 
+        # Add optional filters dynamically
         if provincia:
             base_query += " AND s.provincia = %s"
             params.append(provincia)
-        
+
         if pollutant:
             base_query += " AND s.nometiposensore = %s"
             params.append(pollutant)
-        
-        if datainizio:
+
+        if start_date:
             base_query += " AND m.data >= %s"
-            params.append(datainizio)
-        
-        if datafine:
+            params.append(start_date)
+
+        if end_date:
             base_query += " AND m.data <= %s"
-            params.append(datafine)
+            params.append(end_date)
 
-        base_query += " GROUP BY m.data, s.provincia ORDER BY m.data"
+        # Finalize the query with GROUP BY and ORDER BY
+        base_query += f" {group_by_clause} ORDER BY m.data"
 
+        # Execute query and convert to JSON
         df = pd.read_sql_query(base_query, conn, params=params)
         conn.close()
 
         return jsonify(df.to_dict(orient='records'))
+
     except Exception as e:
+        # Return error message in case of failure
         return jsonify({'error': str(e)}), 500
+
+
 
     
 
@@ -313,4 +283,4 @@ def get_data_by_time():
     
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

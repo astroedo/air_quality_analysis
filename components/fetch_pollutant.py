@@ -10,7 +10,7 @@ from components.logger import logger
 
 def fetch_pollutant(pollutant=None):
     try:
-        url = "http://localhost:5000/api/stations"
+        url = "http://localhost:5001/api/stations"
         if pollutant:
             url += f"?pollutant={pollutant}"
         response = requests.get(url)
