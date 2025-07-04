@@ -395,77 +395,176 @@ layout = html.Div([
         "margin": "0 auto",
         "padding": "60px 20px"
     }),
-    
-    # Team Section
+
+    # Updated Team Section for pages/home_page.py
+    # Replace the existing team section (around line 280-350) with this code
+
+    # Team Section with Profile Pictures
     html.Div([
         html.H2(
-            "Meet Our Team",
+            "Meet Our Team", 
             style={
-                "textAlign": "center",
+                "textAlign": "center", 
                 "color": "white",
-                "marginBottom": "30px",
-                "fontSize": "2rem"
+                "marginBottom": "50px",
+                "fontSize": "2.5rem"
             }
         ),
         html.Div([
-            html.Div("Gianluca Bettoni", style={
-                "backgroundColor": "rgba(255,255,255,0.1)",
-                "color": "white",
-                "padding": "20px 30px",
-                "borderRadius": "15px",
-                "margin": "10px",
-                "flex": "1",
-                "textAlign": "center",
-                "minWidth": "180px"
-            }),
-            html.Div("Mobina Faraji", style={
-                "backgroundColor": "rgba(255,255,255,0.1)",
-                "color": "white",
-                "padding": "20px 30px",
-                "borderRadius": "15px",
-                "margin": "10px",
-                "flex": "1",
-                "textAlign": "center",
-                "minWidth": "180px"
-            }),
-            html.Div("Alessia Ippolito", style={
-                "backgroundColor": "rgba(255,255,255,0.1)",
-                "color": "white",
-                "padding": "20px 30px",
-                "borderRadius": "15px",
-                "margin": "10px",
-                "flex": "1",
-                "textAlign": "center",
-                "minWidth": "180px"
-            }),
-            html.Div("Edoardo Pessina", style={
-                "backgroundColor": "rgba(255,255,255,0.1)",
-                "color": "white",
-                "padding": "20px 30px",
-                "borderRadius": "15px",
-                "margin": "10px",
-                "flex": "1",
-                "textAlign": "center",
-                "minWidth": "180px"
-            })
+            # Team Member 1 - Gianluca Bettone
+            html.Div([
+                html.Div([
+                    # Profile Picture or Initials
+                    html.Div(
+                        "GB",
+                        style={
+                            "width": "80px",
+                            "height": "80px",
+                            "borderRadius": "50%",
+                            "backgroundColor": "rgba(255,255,255,0.3)",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "color": "white",
+                            "fontSize": "24px",
+                            "fontWeight": "bold",
+                            "border": "3px solid white",
+                            "marginBottom": "20px",
+                            "margin": "0 auto 20px auto"
+                        }
+                    ),
+                    html.H3("Gianluca Bettoni", style={"color": "white", "margin": "0"})
+                ], style={
+                    "backgroundColor": "rgba(255,255,255,0.1)",
+                    "padding": "30px",
+                    "borderRadius": "15px",
+                    "textAlign": "center",
+                    "height": "160px",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "justifyContent": "center"
+                })
+            ], style={"flex": "1", "margin": "0 15px"}),
+            
+            # Team Member 2 - Mobina Faraji
+            html.Div([
+                html.Div([
+                    # Profile Picture or Initials
+                    html.Img(
+                        src="/assets/team/Mobina.jpeg",
+                        style={
+                            "width": "80px",
+                            "height": "80px",
+                            "borderRadius": "50%",
+                            "backgroundColor": "rgba(255,255,255,0.3)",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "color": "white",
+                            "fontSize": "24px",
+                            "fontWeight": "bold",
+                            "border": "3px solid white",
+                            "marginBottom": "20px",
+                            "margin": "0 auto 20px auto"
+                        }
+                    ),
+                    html.H3("Mobina Faraji", style={"color": "white", "margin": "0"})
+                ], style={
+                    "backgroundColor": "rgba(255,255,255,0.1)",
+                    "padding": "30px",
+                    "borderRadius": "15px",
+                    "textAlign": "center",
+                    "height": "160px",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "justifyContent": "center"
+                })
+            ], style={"flex": "1", "margin": "0 15px"}),
+            
+            # Team Member 3 - Alessia Ippolito
+            html.Div([
+                html.Div([
+                    # Profile Picture or Initials
+                    html.Img(
+                        src="/assets/team/Alessia.JPG",
+                        style={
+                            "width": "80px",
+                            "height": "80px",
+                            "borderRadius": "50%",
+                            "backgroundColor": "rgba(255,255,255,0.3)",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "color": "white",
+                            "fontSize": "24px",
+                            "fontWeight": "bold",
+                            "border": "3px solid white",
+                            "marginBottom": "20px",
+                            "margin": "0 auto 20px auto"
+                        }
+                    ),
+                    html.H3("Alessia Ippolito", style={"color": "white", "margin": "0"})
+                ], style={
+                    "backgroundColor": "rgba(255,255,255,0.1)",
+                    "padding": "30px",
+                    "borderRadius": "15px",
+                    "textAlign": "center",
+                    "height": "160px",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "justifyContent": "center"
+                })
+            ], style={"flex": "1", "margin": "0 15px"}),
+            
+            # Team Member 4 - Edoardo Pessina
+            html.Div([
+                html.Div([
+                    # Profile Picture or Initials
+                    html.Img(
+                        src = "/assets/team/Edoardo.jpeg",
+                        style={
+                            "width": "80px",
+                            "height": "80px",
+                            "borderRadius": "50%",
+                            "backgroundColor": "rgba(255,255,255,0.3)",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "color": "white",
+                            "fontSize": "24px",
+                            "fontWeight": "bold",
+                            "border": "3px solid white",
+                            "marginBottom": "20px",
+                            "margin": "0 auto 20px auto"
+                        }
+                    ),
+                    html.H3("Edoardo Pessina", style={"color": "white", "margin": "0"})
+                ], style={
+                    "backgroundColor": "rgba(255,255,255,0.1)",
+                    "padding": "30px",
+                    "borderRadius": "15px",
+                    "textAlign": "center",
+                    "height": "160px",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "justifyContent": "center"
+                })
+            ], style={"flex": "1", "margin": "0 15px"})
         ], style={
             "display": "flex",
-            "justifyContent": "center",
+            "maxWidth": "1200px",
+            "margin": "0 auto",
             "flexWrap": "wrap",
-            "maxWidth": "1400px",
-            "margin": "0 auto"
+            "gap": "20px"
         })
     ], style={
         "backgroundColor": "rgb(19, 129, 159)",
-        "padding": "60px 20px",
-        "marginTop": "40px",
-        "textAlign": "center"
+        "padding": "80px 20px",
+        "marginTop": "40px"
     }),
 
 
 ])
-
-
 
 # Callback to update the dashboard components based on selected filters
 @callback(
