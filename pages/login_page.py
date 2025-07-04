@@ -56,7 +56,7 @@ form_card_style = {
 layout = html.Div([
     dcc.Store(id='login-page-store', data={'mode': 'login'}),
     
-    html.H1("Login", id='login-page-title', style={'textAlign': 'center'}),
+    html.H1("Login", id='login-page-title', style={'textAlign': 'center',"fontSize": "32px", "color": "rgb(19, 129, 159)", "marginTop": "40px"}),
     html.Div(id='login-user-info', style={'textAlign': 'center', 'marginBottom': '20px'}),
 
     html.Div([
