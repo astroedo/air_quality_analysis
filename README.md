@@ -1,4 +1,4 @@
-# Geoair 
+# GeoAir 
 
 GeoAir is a comprehensive web-based platform for analyzing and visualizing air quality data across the Lombardia region of Italy. Built with modern web technologies, it provides interactive maps, trend analysis, and real-time data visualization to support environmental decision-making.
 
