@@ -23,36 +23,40 @@ GeoAir is a comprehensive web-based platform for analyzing and visualizing air q
 * PostgreSQL 12+ with PostGIS estention
 
 ## 1. Clone repository
-
+'''
 git clone https://github.com/astroedo/air_quality_analysis.git
 cd air_quality_analysis
-
+'''
 ## Requirements
-
+'''
 pip install -r requirements.txt
-
+'''
 ## Configure database
-
+''''
 createdb lombardia_air_quality
-
+'''
 ## Create user (update credentials in server.py)
+'''
 psql -c "CREATE USER airdata_user WITH PASSWORD 'user';"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE lombardia_air_quality TO airdata_user;"
-
+'''
 ## Initialize the database
 ### Run the Jupyter notebooks in order:
-jupyter notebook database/database_user.ipynb           # Create user tables
-jupyter notebook database/database_station.ipynb        # Load station data
-jupyter notebook database/database_measurement.ipynb    # Load measurement data
+
+* jupyter notebook database/database_user.ipynb           # Create user tables
+* jupyter notebook database/database_station.ipynb        # Load station data
+* jupyter notebook database/database_measurement.ipynb    # Load measurement data
 
 ## Launch the application
 
 ### Terminal 1: Start the Flask API server
+'''
 python server.py
-
+'''
 ### Terminal 2: Start the Dash frontend
+'''
 python app.py
-
+'''
 
 # Data Sources 
 The platform integrates data from Dati Lombardia, the official open data portal of the Lombardy region:
