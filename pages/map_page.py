@@ -135,10 +135,10 @@ def fetch_avg_province_pollutant(pollutants, start_date=None, end_date=None):
         if pollutants == "Tutti" or pollutants is None:
             return pd.DataFrame()  # Return empty DataFrame if no pollutant is selected
         if not start_date or not end_date:
-            res = requests.get("http://localhost:5000/api/avg_province_time", # if time range not given makes the last 7 days average
+            res = requests.get("http://localhost:5001/api/avg_province_time", # if time range not given makes the last 7 days average
                                params={'pollutant': pollutants})
         else:
-            res = requests.get("http://localhost:5000/api/avg_province_time", 
+            res = requests.get("http://localhost:5001/api/avg_province_time", 
                            params = {'pollutant': pollutants,'start_date': start_date, 'end_date': end_date})
         df = pd.DataFrame(res.json())
         return df
