@@ -24,25 +24,12 @@ GeoAir is a comprehensive web-based platform for analyzing and visualizing air q
 git clone https://github.com/astroedo/air_quality_analysis.git
 cd air_quality_analysis
 ```
-
-## 2. Set Up Virtual Environment
-```bash
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
-```
-
-## 3. Install Dependencies
+## 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-## 4. Configure Database
+## 3. Configure Database
 ```bash
 # Create PostgreSQL database
 createdb lombardia_air_quality
@@ -52,7 +39,7 @@ psql -c "CREATE USER airdata_user WITH PASSWORD 'user';"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE lombardia_air_quality TO airdata_user;"
 ```
 
-## 5. Initialize Database
+## 4. Initialize Database
 ```bash
 # Run Jupyter notebooks in order:
 jupyter notebook database/database_user.ipynb
@@ -60,7 +47,7 @@ jupyter notebook database/database_station.ipynb
 jupyter notebook database/database_measurement.ipynb
 ```
 
-## 6. Launch Application
+## 5. Launch Application
 ```bash
 # Terminal 1: Start Flask API server
 python server.py
@@ -69,7 +56,7 @@ python server.py
 python app.py
 ```
 
-## 7. Access Application
+## 6. Access Application
 Open your browser and navigate to:
 ```
 http://localhost:8000
