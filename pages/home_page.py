@@ -21,7 +21,7 @@ dash.register_page(__name__, path="/", name="Home")
 
 # Fetch measurement data for histogram
 def fetch_measurement_data(pollutant_group=None, province=None, start_date=None, end_date=None):
-    api_url="http://localhost:5000/api/measurements2"
+    api_url="http://localhost:5001/api/measurements2"
     params = {}
     if pollutant_group:
         params["pollutant_group"] = pollutant_group
@@ -52,7 +52,7 @@ def fetch_measurement_data(pollutant_group=None, province=None, start_date=None,
 # Get available provinces
 def get_provinces():
     try:
-        response = requests.get("http://localhost:5000/api/provinces")
+        response = requests.get("http://localhost:5001/api/provinces")
         response.raise_for_status()  # check for HTTP errors
         data = response.json()
         
@@ -230,7 +230,7 @@ layout = html.Div([
     # Interactive Dashboard Section
     html.Div([
         html.H2(
-            "🗺️ Interactive Air Quality Dashboard", 
+            "Interactive Air Quality Dashboard", 
             style={
                 "textAlign": "center", 
                 "color": "rgb(19, 129, 159)",
@@ -242,7 +242,7 @@ layout = html.Div([
         # Filters Section
         html.Div([
             html.Div([
-                html.Label("📅 Date Range:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
+                html.Label("Date Range:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
                 dcc.DatePickerRange(
                     id="date-range-picker",
                     start_date=date(2024, 1, 1),
@@ -253,7 +253,7 @@ layout = html.Div([
             ], style={"flex": "1", "marginRight": "20px"}),
             
             html.Div([
-                html.Label("🏭 Pollutant Group:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
+                html.Label("Pollutant Group:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
                 dcc.Dropdown(
                     id="pollutant-group-dropdown",
                     options=[
@@ -268,7 +268,7 @@ layout = html.Div([
             ], style={"flex": "1", "marginRight": "20px"}),
             
             html.Div([
-                html.Label("🏛️ Province:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
+                html.Label("Province:", style={"fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
                 dcc.Dropdown(
                     id="province-dropdown",
                     options=[{"label": "All Provinces", "value": "All"}] + 
@@ -290,7 +290,7 @@ layout = html.Div([
         html.Div([
             # Map Column
             html.Div([
-                html.H3("📍 Station Locations", style={"color": "rgb(19, 129, 159)", "marginBottom": "15px"}),
+                html.H3("Station Locations", style={"color": "rgb(19, 129, 159)", "marginBottom": "15px"}),
                 html.Div(id="sensor-map"),
                 html.Div(id="station-info", style={"marginTop": "10px", "color": "#666", "fontSize": "14px"})
             ], style={
@@ -304,7 +304,7 @@ layout = html.Div([
             
             # Histogram Column
             html.Div([
-                html.H3("📊 Sensor Distribution", style={"color": "rgb(19, 129, 159)", "marginBottom": "15px"}),
+                html.H3("Sensor Distribution", style={"color": "rgb(19, 129, 159)", "marginBottom": "15px"}),
                 dcc.Graph(id="sensor-histogram", style={"height": "400px"})
             ], style={
                 "flex": "1",
@@ -323,7 +323,7 @@ layout = html.Div([
     # Team Section
     html.Div([
         html.H2(
-            "👥 Meet Our Team", 
+            "Meet Our Team", 
             style={
                 "textAlign": "center", 
                 "color": "white",
@@ -469,7 +469,7 @@ def update_dashboard(pollutant_group, province, start_date, end_date):
                 filtered = filtered[filtered["provincia"] == province]
             num_stations = filtered["nomestazione"].nunique()
             num_sensors = len(filtered)
-            station_info = f"📍 {num_stations} stations with {num_sensors} sensors"
+            station_info = f"{num_stations} stations with {num_sensors} sensors"
         else:
             station_info = "No station data available"
     except Exception as e:
