@@ -17,47 +17,63 @@ GeoAir is a comprehensive web-based platform for analyzing and visualizing air q
 ## User management
 * Session Management: Persistent user sessions
 
-# Quick start
-## Prerequisites
-* Python: 3.8 or higher
-* PostgreSQL 12+ with PostGIS estention
+# 🚀 Quick Start
 
-## 1. Clone repository
-'''bash
+## 1. Clone the Repository
+```bash
 git clone https://github.com/astroedo/air_quality_analysis.git
 cd air_quality_analysis
-'''
-## Requirements
-'''
+```
+
+## 2. Set Up Virtual Environment
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+source .venv/bin/activate
+```
+
+## 3. Install Dependencies
+```bash
 pip install -r requirements.txt
-'''
-## Configure database
-''''
+```
+
+## 4. Configure Database
+```bash
+# Create PostgreSQL database
 createdb lombardia_air_quality
-'''
-## Create user (update credentials in server.py)
-'''
+
+# Create user
 psql -c "CREATE USER airdata_user WITH PASSWORD 'user';"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE lombardia_air_quality TO airdata_user;"
-'''
-## Initialize the database
-### Run the Jupyter notebooks in order:
+```
 
-* jupyter notebook database/database_user.ipynb           # Create user tables
-* jupyter notebook database/database_station.ipynb        # Load station data
-* jupyter notebook database/database_measurement.ipynb    # Load measurement data
+## 5. Initialize Database
+```bash
+# Run Jupyter notebooks in order:
+jupyter notebook database/database_user.ipynb
+jupyter notebook database/database_station.ipynb
+jupyter notebook database/database_measurement.ipynb
+```
 
-## Launch the application
-
-### Terminal 1: Start the Flask API server
-'''
+## 6. Launch Application
+```bash
+# Terminal 1: Start Flask API server
 python server.py
-'''
-### Terminal 2: Start the Dash frontend
-'''
-python app.py
-'''
 
+# Terminal 2: Start Dash frontend  
+python app.py
+```
+
+## 7. Access Application
+Open your browser and navigate to:
+```
+http://localhost:8000
+```
 # Data Sources 
 The platform integrates data from Dati Lombardia, the official open data portal of the Lombardy region:
 
